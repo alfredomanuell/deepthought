@@ -1,7 +1,6 @@
 import CustomButton from "../components/CustomButton"
 import CustomLink from "../components/CustomLink"
 
-
 export default function SignIn() {
 	return (
 		<>
