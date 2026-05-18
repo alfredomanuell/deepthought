@@ -1,12 +1,11 @@
-import './App.css'
-import SignIn from './signin_signup/signin'
 
-export default function App() {
+export default function App({CustomComponent} : {CustomComponent : any}) {
+	console.log(CustomComponent)
 	return (
 		<>
 			<div className="bg-background h-screen">
 				<div className='h-screen flex items-center justify-center '>
-					<SignIn/>
+					<CustomComponent/>
 				</div>
 			</div>
 		</>
