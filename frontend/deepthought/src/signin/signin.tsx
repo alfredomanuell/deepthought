@@ -1,34 +1,38 @@
-import { NavLink } from "react-router"
+import { Link, NavLink } from "react-router"
 import CustomButton from "../components/CustomButton"
-import CustomLink from "../components/CustomLink"
 
 export default function SignIn() {
-	// const { navigate } = useNavigate();
 	return (
-			<div className="w-1/2 xl:w-2/5 h-96 bg-neutral_contrast flex items-center justify-between flex-col text-center pt-4 border-b-8 border-r-8 border-l-4 border-t-4 border-black">
+			<div className="px-8 w-[500px] space-y-16 pt-8 bg-neutral_contrast flex items-center justify-between flex-col text-center  border-b-8 border-r-8 border-l-4 border-t-4 border-black">
 
 				<div>
 
-					<CustomLink textSize="4xl" name="Deepthought" route="Home" highlight={false} fontName="custom"/>
-
-					<div className="text-contrast pt-8 text-center font-pressStart">
+					<Link className="text-4xl font-custom text-contrast" to="/">
+						Deepthought
+					</Link>
+					<div className="text-white/70 text-sm pt-8 pb-4 text-center font-pressStart">
 						Exclusively for 42 Network students
 					</div>
 
-					<CustomButton name="Login with 42" />
-					<div className="flex flex-col">
-						<NavLink className="font-pressStart text-contrast underline hover:text-secundary transition text-xs" to={"/emailSignIn"}>Or login with email</NavLink>
-						<NavLink className="font-pressStart text-contrast underline hover:text-secundary transition text-xs" to={"/"}>Open game(beta)</NavLink>
+					<CustomButton route="/" name="Login with 42" />
+					<div className="flex flex-col pt-4">
+						<NavLink className="font-pressStart text-contrast hover:text-secundary transition text-xs" to={"/emailSignIn"}>Or login with email</NavLink>
+						{/* <NavLink className="font-pressStart text-contrast underline hover:text-secundary transition text-xs" to={"/"}>Open game(beta)</NavLink> */}
 					</div>
 
 				</div>
 
-				<div className="flex flex-col text-center xl:flex-row pb-4 justify-around w-full ">
-					<CustomLink name="Terms of Service" route="ToS" highlight={true} fontName="pressStart" textSize=""/>
-				
-					<CustomLink name="Privacy Policy" route="PrivacyPolicy" highlight={true} fontName="pressStart" textSize=""/>
+				<div className=" flex flex-row text-center pb-4 justify-around w-full ">
+					<Link className="text-xs font-pressStart text-contrast hover:text-secundary transition" to="/ToS">
+						Terms of Service
+					</Link>
+					<Link className="text-xs font-pressStart text-contrast hover:text-secundary transition" to="/PrivacyPolicy">
+						Privacy Policy
+					</Link>
 				</div>
-
+				<div className="absolute right-4 bottom-4 text-xs text-white">
+					v1.0
+				</div>
 			</div>
 	)
 }
