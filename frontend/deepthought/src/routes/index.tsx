@@ -4,6 +4,8 @@ import EmailSignIn from "../signin/email_signin";
 import SignIn from "../signin/signin";
 import OTPEmail from "../signin/OTPemail";
 import PhaserGame from "../game/PhaserGame";
+import PrivacyPolicy from "../policy_pages/PrivacyPolicy";
+import ToS from "../policy_pages/ToS";
 
 export function AppRouter() {
 	return (
@@ -11,6 +13,8 @@ export function AppRouter() {
 			<Route path="/" element=<App CustomComponent={SignIn}/>/>
 			<Route path="/EmailSignIn" element=<App CustomComponent={EmailSignIn}/>/>
 			<Route path="/OTPEmail" element=<App CustomComponent={OTPEmail}/>/>
+			<Route path="/PrivacyPolicy" element=<App CustomComponent={PrivacyPolicy}/>/>
+			<Route path="/ToS" element=<App CustomComponent={ToS}/>/>
 			<Route path="/Game" element=<App CustomComponent={PhaserGame}/>/>
 		</Routes>
 	)
