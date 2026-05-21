@@ -17,7 +17,7 @@ export default function SignIn() {
 					<CustomButton route="/" name="Login with 42" />
 					<div className="flex flex-col pt-4">
 						<NavLink className="font-pressStart text-contrast hover:text-secundary transition text-xs" to={"/emailSignIn"}>Or login with email</NavLink>
-						{/* <NavLink className="font-pressStart text-contrast underline hover:text-secundary transition text-xs" to={"/"}>Open game(beta)</NavLink> */}
+						<NavLink className="font-pressStart text-contrast underline hover:text-secundary transition text-xs" to={"/Game"}>Open game(beta)</NavLink>
 					</div>
 
 				</div>
