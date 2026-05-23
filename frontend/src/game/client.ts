@@ -16,24 +16,27 @@ class GameScene extends Phaser.Scene {
 	]
 	private offsetX = 0
 	private offsetY = 0
+	private highlightTile!: Phaser.GameObjects.Image
 
 	preload() {
 		// Inside your Phaser preload() function:
-		this.load.image('wooden-floor', 'assets/woodenfloor.png');
+		this.load.image('wooden-floor', 'assets/woodenfloor2.png');
+		this.load.image('highlight', 'assets/tilehighlight.png');
 	}
 
 	create() {
 	// Center the map on screen
 		this.offsetX = this.cameras.main.width / 2
 		this.offsetY = this.cameras.main.height / 3
+		
+		this.highlightTile = this.add.image(0, 0, 'highlight')
+		this.highlightTile.setVisible(false)
 
 		this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
 			const isoX = pointer.x - this.offsetX
 			const isoY = pointer.y - this.offsetY
 			let { x: tileX, y: tileY } = isoToCart(isoX, isoY)
 			
-			tileX = Math.floor(tileX)
-			tileY = Math.floor(tileY)
 			
 			if (tileX >= 0 && tileX < this.mapData[0].length && 
 				tileY >= 0 && tileY < this.mapData.length) {
@@ -46,9 +49,7 @@ class GameScene extends Phaser.Scene {
 				const tileType = this.mapData[row][col]
 				const { x, y } = cartToIso(col, row)
 
-				// Choose tile texture based on type
-				if (tileType === 0) continue // Skip empty tiles
-				if (tileType === 1) var texture = 'wooden-floor' // Placeholder for different types
+				const texture = tileType === 1 ? 'wooden-floor' : 'wooden-floor'
 
 				const tile = this.add.image(
 					x + this.offsetX,
@@ -66,10 +67,19 @@ class GameScene extends Phaser.Scene {
 	update(time: number, delta: number): void {
 		const worldX = this.input.activePointer.worldX - this.offsetX
 		const worldY = this.input.activePointer.worldY - this.offsetY
-		const { x: tileX, y: tileY } = isoToCart(worldX, worldY)
-		// console.log(`Mouse at world coords: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}) - Tile coords: (${tileX.toFixed(2)}, ${tileY.toFixed(2)})`)
-	}
+		const { x: hoverX, y: hoverY } = isoToCart(worldX, worldY)
 
+		if (hoverX >= 0 && hoverX < this.mapData[0].length && 
+			hoverY >= 0 && hoverY < this.mapData.length) {
+				const isoPos = cartToIso(hoverX, hoverY)
+				this.highlightTile.setPosition(isoPos.x + this.offsetX, isoPos.y + this.offsetY)
+				this.highlightTile.setDepth(hoverX + hoverY + 0.5)
+				this.highlightTile.setVisible(true)
+		} else {
+			this.highlightTile.setVisible(false)
+		}
+
+	}
 }
 
 function cartToIso(cartX: number, cartY: number): { x: number, y: number } {
@@ -79,8 +89,8 @@ function cartToIso(cartX: number, cartY: number): { x: number, y: number } {
 }
 
 function isoToCart(isoX: number, isoY: number): { x: number, y: number } {
-	const x = (isoY / (TILE_HEIGHT / 2) + isoX / (TILE_WIDTH / 2)) / 2;
-	const y = (isoY / (TILE_HEIGHT / 2) - isoX / (TILE_WIDTH / 2)) / 2;
+	const x = Math.floor((isoY / (TILE_HEIGHT / 2) + isoX / (TILE_WIDTH / 2)) / 2);
+	const y = Math.floor((isoY / (TILE_HEIGHT / 2) - isoX / (TILE_WIDTH / 2)) / 2);
 	return { x, y };
 }
 
@@ -88,9 +98,9 @@ export function startGame(parent: string | HTMLElement): Phaser.Game {
 	return new Phaser.Game({
 		type: Phaser.AUTO,
 		parent,
-		width: 800,
-		height: 600,
-		backgroundColor: "#4488cc",
+		width: 1600,
+		height: 800,
+		backgroundColor: "#111125",
 		scene: [GameScene],
 		physics: {
 			default: 'arcade',
