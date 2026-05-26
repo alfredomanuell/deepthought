@@ -6,9 +6,10 @@ import { UsersModule } from './users/users.module';
 import { AchivementsModule } from './achivements/achivements.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ResourcesModule } from './resources/resources.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, AchivementsModule, ProjectsModule, ResourcesModule],
+  imports: [AuthModule, UsersModule, AchivementsModule, ProjectsModule, ResourcesModule, LeaderboardModule],
   controllers: [AppController],
   providers: [AppService],
 })
