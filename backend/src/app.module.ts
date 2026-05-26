@@ -8,9 +8,10 @@ import { ProjectsModule } from './projects/projects.module';
 import { ResourcesModule } from './resources/resources.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, AchivementsModule, ProjectsModule, ResourcesModule, LeaderboardModule, FeedbackModule],
+  imports: [AuthModule, UsersModule, AchivementsModule, ProjectsModule, ResourcesModule, LeaderboardModule, FeedbackModule, AdminModule],
   controllers: [AppController],
   providers: [AppService],
 })
