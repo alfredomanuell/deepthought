@@ -22,6 +22,8 @@ class GameScene extends Phaser.Scene {
 		// Inside your Phaser preload() function:
 		this.load.image('wooden-floor', 'assets/floor.png');
 		this.load.image('highlight', 'assets/tilehighlight.png');
+		this.load.tilemapTiledJSON('map', 'assets/cluster/clusterV2');
+		//assets/cluster/clusterV2
 	}
 
 	create() {
