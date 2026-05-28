@@ -7,12 +7,15 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { SendOtpDto } from './dto/send-otp.dto';
+import { MailerService } from '@nestjs-modules/mailer';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private mailer: MailerService,
   ) {}
 
   async signup(dto: SignupDto) {
@@ -77,34 +80,76 @@ export class AuthService {
     };
   }
 
-  async sendOtp(dto: SendOtpDto) {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+  async sendOtp(email: string) {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await this.prisma.emailOtp.create({
+    await this.prisma.oTPCode.create({
       data: {
-        email: dto.email,
-        code,
+        email,
+        code: otp,
         expiresAt: new Date(Date.now() + 5 * 60 * 1000),
       },
     });
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    await transporter.sendMail({
+    await this.mailer.sendMail({
       from: process.env.EMAIL_USER,
-      to: dto.email,
-      subject: 'Deepthought OTP Code',
-      text: `Your OTP code is: ${code}`,
+      to: email,
+      subject: 'Deepthought OTP',
+      text: `Your OTP code is: ${otp}`,
     });
 
     return {
-      message: 'OTP sent successfully',
+      message: 'OTP sent',
+    };
+  }
+
+  async verifyOtp(dto: VerifyOtpDto) {
+    const otpRecord = await this.prisma.oTPCode.findFirst({
+      where: {
+        email: dto.email,
+        code: dto.otp,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!otpRecord) {
+      throw new UnauthorizedException('Invalid OTP');
+    }
+
+    await this.prisma.oTPCode.delete({
+      where: {
+        id: otpRecord.id,
+      },
+    });
+
+    let user = await this.prisma.user.findUnique({
+      where: {
+        email: dto.email,
+      },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email: dto.email,
+          password: '',
+        },
+      });
+    }
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: '15m',
+    });
+
+    return {
+      accessToken,
     };
   }
 }

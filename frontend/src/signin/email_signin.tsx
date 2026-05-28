@@ -1,29 +1,29 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-
+import { useNavigate } from 'react-router'
 import emailIcon from '../assets/closed_email.png'
-import CustomButton from '../components/CustomButton'
 
 export default function EmailSignIn() {
-	const navigate = useNavigate()
 
 	const [email, setEmail] = useState('')
 	const [error, setError] = useState('')
-	const [loading, setLoading] = useState(false)
+
+	const navigate = useNavigate()
 
 	async function handleSendOtp() {
+
+		if (!email.includes('@')) {
+			setError('Invalid email')
+			return
+		}
+
 		try {
-			setLoading(true)
-			setError('')
 
 			const response = await fetch('http://localhost:3000/auth/send-otp', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({
-					email,
-				}),
+				body: JSON.stringify({ email }),
 			})
 
 			const data = await response.json()
@@ -36,12 +36,9 @@ export default function EmailSignIn() {
 			localStorage.setItem('pendingEmail', email)
 
 			navigate('/OTPEmail')
-		}
-		catch (err) {
+
+		} catch {
 			setError('Server error')
-		}
-		finally {
-			setLoading(false)
 		}
 	}
 
@@ -49,11 +46,7 @@ export default function EmailSignIn() {
 		<div className="flex flex-col items-center w-[500px] h-96 bg-neutral_contrast border-b-8 border-r-8 border-l-4 border-t-4 border-black">
 
 			<div className='flex flex-col items-center'>
-				<img
-					src={emailIcon}
-					alt="Email icon"
-					className='w-24 h-auto'
-				/>
+				<img src={emailIcon} alt="Email icon" className='w-24 h-auto' />
 
 				<p className="font-pressStart text-contrast">
 					Email signin
@@ -62,7 +55,10 @@ export default function EmailSignIn() {
 
 			<input
 				value={email}
-				onChange={(e) => setEmail(e.target.value)}
+				onChange={(e) => {
+					setEmail(e.target.value)
+					setError('')
+				}}
 				placeholder='johndoe@mail.com'
 				className="text-center px-16 py-2 text-sm font-pressStart focus:outline-none border-b-8 mt-4 border-r-8 border-l-4 border-t-4 border-black"
 				type="email"
@@ -72,20 +68,20 @@ export default function EmailSignIn() {
 				A code will be sent to your email.
 			</p>
 
-			<div onClick={handleSendOtp}>
-				<CustomButton
-					route='#'
-					name={loading ? 'Sending...' : 'Send OTP code'}
-				/>
-			</div>
-
 			{
-				error && (
-					<p className='text-red-500 text-xs mt-4 font-pressStart'>
-						{error}
-					</p>
-				)
+				error &&
+				<p className='text-red-500 text-xs font-pressStart mt-4'>
+					{error}
+				</p>
 			}
+
+			<button
+				onClick={handleSendOtp}
+				className="mt-6 px-6 py-3 bg-black text-white font-pressStart text-xs"
+			>
+				Send OTP code
+			</button>
+
 		</div>
 	)
 }
