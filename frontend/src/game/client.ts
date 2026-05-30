@@ -4,101 +4,110 @@ const TILE_HEIGHT = 32;
 const TILE_WIDTH = 64;
 
 class GameScene extends Phaser.Scene {
-	private mapData: number[][] = [
-		[1, 1, 1, 1, 1, 1, 1, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1],
-	]
-	private offsetX = 0
-	private offsetY = 0
-	private highlightTile!: Phaser.GameObjects.Image
+	private offsetX = 0;
+	private offsetY = 0;
 
-preload() {
-    this.load.image('highlight', 'assets/tilehighlight.png');
-    this.load.image('floors', 'assets/floors.png');
-    this.load.image('props',  'assets/props.png');
-    this.load.image('walls',  'assets/walls.png');
-    // Load the tmj as plain JSON, not a tilemap
-    this.load.json('map', 'assets/cluster/clusterV3.tmj');
-}
+	preload() {
 
-create() {
-    this.offsetX = this.cameras.main.width / 2;
-    this.offsetY = this.cameras.main.height / 3;
+		this.load.image('floor', 'assets/tilesets/floors.png');
+		this.load.image('props', 'assets/tilesets/Props.png');
+		this.load.image('walls', 'assets/tilesets/walls.png');
+		this.load.image('plusButton', 'assets/buttons/plusButton.png');
+		this.load.image('minusButton', 'assets/buttons/minusButton.png');
+		this.load.image('dragCursor', 'assets/buttons/dragCursor.png')
+		this.load.tilemapTiledJSON('map', 'assets/cluster/map1.tmj');
+	}
 
-    // GID ranges from your .tmj tilesets block:
-    // floors: GID 1–4, props: GID 5–8, walls: GID 9+
-    const GID_TO_TEXTURE: Record<number, string> = {
-        1: 'floors', 2: 'floors', 3: 'floors', 4: 'floors',
-        5: 'props',  6: 'props',  7: 'props',  8: 'props',
-        9: 'walls',  10: 'walls', 11: 'walls', 12: 'walls',
-        13: 'walls', 14: 'walls',
-    };
-
-    const mapJson = this.cache.json.get('map');
-
-    for (const layer of mapJson.layers) {
-        for (const chunk of layer.chunks) {
-            for (let i = 0; i < chunk.data.length; i++) {
-                const gid = chunk.data[i];
-                if (gid === 0) continue;
-
-                const texture = GID_TO_TEXTURE[gid];
-                if (!texture) continue;
-
-                // chunk.x/y are tile coords, i gives row/col within chunk
-                const col = chunk.x + (i % chunk.width);
-                const row = chunk.y + Math.floor(i / chunk.width);
-
-                const { x, y } = cartToIso(col, row);
-                const tile = this.add.image(
-                    x + this.offsetX,
-                    y + this.offsetY,
-                    texture
-                );
-                tile.setDepth(col + row);
-            }
-        }
-    }
-
-    this.highlightTile = this.add.image(0, 0, 'highlight');
-    this.highlightTile.setVisible(false);
-}
-
-	update(time: number, delta: number): void {
-		const worldX = this.input.activePointer.worldX - this.offsetX
-		const worldY = this.input.activePointer.worldY - this.offsetY
-		const { x: hoverX, y: hoverY } = isoToCart(worldX, worldY)
-
-		if (hoverX >= 0 && hoverX < this.mapData[0].length && 
-			hoverY >= 0 && hoverY < this.mapData.length) {
-				const isoPos = cartToIso(hoverX, hoverY)
-				this.highlightTile.setPosition(isoPos.x + this.offsetX, isoPos.y + this.offsetY)
-				this.highlightTile.setDepth(hoverX + hoverY + 0.5)
-				this.highlightTile.setVisible(true)
-		} else {
-			this.highlightTile.setVisible(false)
+	create() {
+		const keyboard = this.input.keyboard;
+		this.offsetX = this.cameras.main.width / 2;
+		this.offsetY = this.cameras.main.height / 2;
+		if (keyboard) {
+			keyboard.enabled = true;
 		}
+		
+		const uiCamera = this.cameras.add(0, 0, this.cameras.main.width, this.cameras.main.height);
+		uiCamera.setScroll(0, 0);
 
+		keyboard?.on('keydown-SPACE', () => {
+			this.input.setDefaultCursor('url(assets/buttons/dragCursor.png), pointer');
+			console.log('SPACE down');
+		});
+
+		keyboard?.on('keyup-SPACE', () => {
+			this.input.setDefaultCursor('default');
+			console.log('SPACE up');
+		});
+
+		this.input.on('pointerup', () => {
+			this.input.setDefaultCursor('default');
+		});
+
+		const padding = 12;
+
+		// Top-right aligned buttons using origin (1,0) so we don't need to subtract image size
+		const plusButton = this.add.image(this.cameras.main.width - padding, padding, 'plusButton')
+			.setOrigin(1, 0)
+			.setInteractive()
+			.setScrollFactor(0)
+			.setTint(0xaaaaaa);
+
+		plusButton.on('pointerdown', () => { 
+			this.cameras.main.zoom = Phaser.Math.Clamp(this.cameras.main.zoom + 0.1, 0.5, 2);
+		 });
+		plusButton.on('pointerover', () => plusButton.clearTint());
+		plusButton.on('pointerout', () => plusButton.setTint(0xaaaaaa));
+
+		const spacing = 8;
+		const minusButton = this.add.image(this.cameras.main.width - padding, padding + plusButton.displayHeight + spacing, 'minusButton')
+			.setOrigin(1, 0)
+			.setInteractive()
+			.setScrollFactor(0)
+			.setTint(0xaaaaaa);
+
+		minusButton.on('pointerdown', () => { 
+			  this.cameras.main.zoom = Phaser.Math.Clamp(this.cameras.main.zoom - 0.1, 0.5, 2);
+		});
+		minusButton.on('pointerover', () => minusButton.clearTint());
+		minusButton.on('pointerout', () => minusButton.setTint(0xaaaaaa));
+
+		this.cameras.main.ignore([plusButton, minusButton]);
+		uiCamera.ignore([/* Maybe will need later */]);
+
+
+		const map = this.make.tilemap({ key: 'map', tileWidth: TILE_WIDTH, tileHeight: TILE_HEIGHT });
+		const tileset = map.addTilesetImage('Floors', 'floor');
+		const layer = map.createLayer('Floors', tileset!, this.offsetX + TILE_WIDTH, this.offsetY + TILE_HEIGHT);
+		layer?.setDepth(0);
+		
+		const propsTileset = map.addTilesetImage('Props', 'props');
+		const propsLayer = map.createLayer('Props', propsTileset!, this.offsetX + TILE_WIDTH, this.offsetY);
+		propsLayer?.setDepth(1);
+		
+		const wallsTileset = map.addTilesetImage('Walls', 'walls');
+		const wallsLayer = map.createLayer('Walls', wallsTileset!, this.offsetX + TILE_WIDTH, this.offsetY);
+		wallsLayer?.setDepth(2);
+
+		this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+		// Center camera on map so it's visible by default
+		// Center on the middle tile of the map
+		const midCol = map.width / 2;
+		const midRow = map.height / 2;
+		const worldX = (midCol - midRow) * (TILE_WIDTH / 2);
+		const worldY = (midCol + midRow) * (TILE_HEIGHT / 2);
+		this.cameras.main.centerOn(worldX, worldY);
+
+		this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: any, _deltaX: number, deltaY: number) => {
+			const zoom = this.cameras.main.zoom - deltaY * 0.001;
+			this.cameras.main.zoom = Phaser.Math.Clamp(zoom, 0.5, 2);
+		});
+	}
+
+	update(_time: number, _delta: number): void {
+	
 	}
 }
 
-function cartToIso(cartX: number, cartY: number): { x: number, y: number } {
-	const x = (cartX - cartY) * (TILE_WIDTH / 2);
-	const y = (cartX + cartY) * (TILE_HEIGHT / 2);
-	return { x, y };
-}
-
-function isoToCart(isoX: number, isoY: number): { x: number, y: number } {
-	const x = Math.floor((isoY / (TILE_HEIGHT / 2) + isoX / (TILE_WIDTH / 2)) / 2);
-	const y = Math.floor((isoY / (TILE_HEIGHT / 2) - isoX / (TILE_WIDTH / 2)) / 2);
-	return { x, y };
-}
 
 export function startGame(parent: string | HTMLElement): Phaser.Game {
 	return new Phaser.Game({
