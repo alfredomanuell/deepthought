@@ -8,7 +8,6 @@ export function setupInput(scene: Phaser.Scene): void {
 	let pointerHeld = false;
 
 	const stopDrag = () => {
-		scene.input.setDefaultCursor("default");
 	};
 
 	if (keyboard) {
@@ -16,7 +15,6 @@ export function setupInput(scene: Phaser.Scene): void {
 
 		keyboard.on("keydown-SPACE", () => {
 			spaceHeld = true;
-			scene.input.setDefaultCursor("url(assets/buttons/dragCursor.png), pointer");
 		});
 
 		keyboard.on("keyup-SPACE", () => {
