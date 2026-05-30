@@ -16,12 +16,12 @@ export function setupMap(scene: Phaser.Scene, offsetX: number, offsetY: number):
 	floorsLayer?.setDepth(0);
 
 	const propsTileset = map.addTilesetImage("Props", "props");
-	const propsLayer = map.createLayer("Props", propsTileset!, offsetX, offsetY);
-	propsLayer?.setDepth(1);
+	const propsLayer = map.createLayer("Props", propsTileset!, offsetX, offsetY - TILE_HEIGHT);
+	propsLayer?.setDepth(2);
 
 	const wallsTileset = map.addTilesetImage("Walls", "walls");
-	const wallsLayer = map.createLayer("Walls", wallsTileset!, offsetX, offsetY);
-	wallsLayer?.setDepth(2);
+	const wallsLayer = map.createLayer("Walls", wallsTileset!, offsetX, offsetY - TILE_HEIGHT);
+	wallsLayer?.setDepth(1);
 
 	return { map, floorsLayer, propsLayer, wallsLayer };
 }
