@@ -1,30 +1,247 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
 }
 
 model User {
-  id            String   @id @default(cuid())
-  fortyTwoId    Int      @unique
+  id                  String                  @id @default(cuid())
+  fortyTwoId          Int                     @unique
+  login               String                  @unique
+  email               String                  @unique
+  displayName         String
+  avatar              String?
+  bio                 String?
+  level               Float                   @default(0)
+  xp                  Int                     @default(0)
+  campus              String?
+  coalition           String?
+  evalPoints          Int                     @default(0)
+  role                Role                    @default(USER)
+  isBanned            Boolean                 @default(false)
+  bannedAt            DateTime?
+  lastSyncAt          DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  achievements        UserAchievement[]
+  projects            UserProject[]
+  helpOffers          ProjectHelpOffer[]
+  resources           Resource[]
+  feedbacks           Feedback[]
+  emailCodes          EmailVerificationCode[]
+  friendshipsSent     Friendship[]            @relation("FriendshipRequester")
+  friendshipsReceived Friendship[]            @relation("FriendshipAddressee")
+  notifications       Notification[]
+  chatMessages        Message[]
+  chatRooms           ChatRoomParticipant[]
+}
 
-  login         String   @unique
-  email         String   @unique
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  createdAt   DateTime      @default(now())
+  users       UserProject[]
+  resources   Resource[]
+}
 
-  displayName   String
-  avatar        String?
+enum ProjectStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  FINISHED
+  FAILED
+}
 
-  level         Int      @default(0)
-  xp            Int      @default(0)
+model UserProject {
+  id           String               @id @default(cuid())
+  userId       String
+  projectId    String
+  status       ProjectStatus
+  finalMark    Int?
+  validatedAt  DateTime?
+  needHelp     Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  user         User                 @relation(fields: [userId], references: [id])
+  project      Project              @relation(fields: [projectId], references: [id])
+  helpRequests ProjectHelpRequest[]
+  helpOffers   ProjectHelpOffer[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  @@unique([userId, projectId])
+}
+
+model ProjectHelpRequest {
+  id            String      @id @default(cuid())
+  userProjectId String
+  title         String
+  description   String
+  isResolved    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  userProject   UserProject @relation(fields: [userProjectId], references: [id])
+}
+
+model ProjectHelpOffer {
+  id            String      @id @default(cuid())
+  userProjectId String
+  helperId      String
+  message       String?
+  createdAt     DateTime    @default(now())
+  helper        User        @relation(fields: [helperId], references: [id])
+  userProject   UserProject @relation(fields: [userProjectId], references: [id])
+}
+
+model Achievement {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  title       String
+  description String
+  icon        String?
+  xpReward    Int               @default(0)
+  createdAt   DateTime          @default(now())
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id])
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+}
+
+enum ResourceType {
+  LINK
+  PDF
+  VIDEO
+  ARTICLE
+  GITHUB
+  OTHER
+}
+
+model Resource {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  url         String
+  type        ResourceType
+  userId      String
+  projectId   String
+  createdAt   DateTime     @default(now())
+  user        User         @relation(fields: [userId], references: [id])
+  project     Project      @relation(fields: [projectId], references: [id])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model EmailVerificationCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId])
+}
+
+enum NotificationType {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  HELP_REQUEST
+  PROJECT_UPDATE
+  ACHIEVEMENT_UNLOCKED
+  SYSTEM
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+enum ChatRoomType {
+  GLOBAL
+  PRIVATE
+  PROJECT
+  ROOM
+}
+
+model ChatRoom {
+  id           String                @id @default(cuid())
+  name         String?
+  type         ChatRoomType
+  projectId    String?
+  createdAt    DateTime              @default(now())
+  messages     Message[]
+  participants ChatRoomParticipant[]
+}
+
+model ChatRoomParticipant {
+  id         String   @id @default(cuid())
+  userId     String
+  chatRoomId String
+  joinedAt   DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chatRoomId])
+  @@index([chatRoomId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  chatRoomId String
+  senderId   String
+  content    String
+  createdAt  DateTime @default(now())
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([chatRoomId, createdAt])
 }
