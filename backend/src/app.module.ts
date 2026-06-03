@@ -11,6 +11,7 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { AdminModule } from './admin/admin.module';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
+import { FortytwoModule } from './integrations/fortytwo/fortytwo.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { PrismaModule } from './prisma/prisma.module';
     FeedbackModule,
     AdminModule,
     PrismaModule,
+    FortytwoModule,
   ],
 
   controllers: [AppController],
