@@ -3,7 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { AchivementsModule } from './achivements/achivements.module';
+import { AchievementsModule } from './achievements/achievements.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ResourcesModule } from './resources/resources.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
@@ -11,7 +11,7 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { AdminModule } from './admin/admin.module';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
-import { FortytwoModule } from './integrations/fortytwo/fortytwo.module';
+import { FortyTwoModule } from './integrations/fortytwo/fortytwo.module';
 
 @Module({
   imports: [
@@ -21,14 +21,14 @@ import { FortytwoModule } from './integrations/fortytwo/fortytwo.module';
 
     AuthModule,
     UsersModule,
-    AchivementsModule,
+    AchievementsModule,
     ProjectsModule,
     ResourcesModule,
     LeaderboardModule,
     FeedbackModule,
     AdminModule,
     PrismaModule,
-    FortytwoModule,
+    FortyTwoModule,
   ],
 
   controllers: [AppController],
