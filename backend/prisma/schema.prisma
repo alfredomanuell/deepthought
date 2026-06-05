@@ -7,12 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  USER
-  MODERATOR
-  ADMIN
-}
-
 model User {
   id                  String                  @id @default(cuid())
   fortyTwoId          Int                     @unique
@@ -20,32 +14,32 @@ model User {
   email               String                  @unique
   displayName         String
   avatar              String?
-  bio                 String?
   level               Float                   @default(0)
   xp                  Int                     @default(0)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  bannedAt            DateTime?
+  bio                 String?
   campus              String?
   coalition           String?
   evalPoints          Int                     @default(0)
-  role                Role                    @default(USER)
   isBanned            Boolean                 @default(false)
-  bannedAt            DateTime?
-  isEmailVerified     Boolean                 @default(false)
   lastSyncAt          DateTime?
+  role                Role                    @default(USER)
+  isEmailVerified     Boolean                 @default(false)
   lastSeenAt          DateTime?
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
   refreshTokenHash    String?
-  achievements        UserAchievement[]
-  projects            UserProject[]
+  chatRooms           ChatRoomParticipant[]
+  emailCodes          EmailVerificationCode[]
+  feedbacks           Feedback[]
+  friendshipsReceived Friendship[]            @relation("FriendshipAddressee")
+  friendshipsSent     Friendship[]            @relation("FriendshipRequester")
+  chatMessages        Message[]
+  notifications       Notification[]
   helpOffers          ProjectHelpOffer[]
   resources           Resource[]
-  feedbacks           Feedback[]
-  emailCodes          EmailVerificationCode[]
-  friendshipsSent     Friendship[]            @relation("FriendshipRequester")
-  friendshipsReceived Friendship[]            @relation("FriendshipAddressee")
-  notifications       Notification[]
-  chatMessages        Message[]
-  chatRooms           ChatRoomParticipant[]
+  achievements        UserAchievement[]
+  projects            UserProject[]
 }
 
 model Project {
@@ -54,16 +48,9 @@ model Project {
   slug        String        @unique
   description String?
   createdAt   DateTime      @default(now())
-  users       UserProject[]
-  resources   Resource[]
   chatRooms   ChatRoom[]
-}
-
-enum ProjectStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  FINISHED
-  FAILED
+  resources   Resource[]
+  users       UserProject[]
 }
 
 model UserProject {
@@ -76,10 +63,10 @@ model UserProject {
   needHelp     Boolean              @default(false)
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
-  user         User                 @relation(fields: [userId], references: [id])
-  project      Project              @relation(fields: [projectId], references: [id])
-  helpRequests ProjectHelpRequest[]
   helpOffers   ProjectHelpOffer[]
+  helpRequests ProjectHelpRequest[]
+  project      Project              @relation(fields: [projectId], references: [id])
+  user         User                 @relation(fields: [userId], references: [id])
 
   @@unique([userId, projectId])
   @@index([projectId])
@@ -126,19 +113,10 @@ model UserAchievement {
   userId        String
   achievementId String
   unlockedAt    DateTime    @default(now())
-  user          User        @relation(fields: [userId], references: [id])
   achievement   Achievement @relation(fields: [achievementId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
 
   @@unique([userId, achievementId])
-}
-
-enum ResourceType {
-  LINK
-  PDF
-  VIDEO
-  ARTICLE
-  GITHUB
-  OTHER
 }
 
 model Resource {
@@ -150,8 +128,8 @@ model Resource {
   userId      String
   projectId   String
   createdAt   DateTime     @default(now())
-  user        User         @relation(fields: [userId], references: [id])
   project     Project      @relation(fields: [projectId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
 
   @@index([projectId])
 }
@@ -180,12 +158,6 @@ model EmailVerificationCode {
   @@index([expiresAt])
 }
 
-enum FriendshipStatus {
-  PENDING
-  ACCEPTED
-  BLOCKED
-}
-
 model Friendship {
   id          String           @id @default(cuid())
   requesterId String
@@ -193,21 +165,12 @@ model Friendship {
   status      FriendshipStatus @default(PENDING)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
-  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, addresseeId])
   @@index([addresseeId])
   @@index([requesterId])
-}
-
-enum NotificationType {
-  FRIEND_REQUEST
-  FRIEND_ACCEPTED
-  HELP_REQUEST
-  PROJECT_UPDATE
-  ACHIEVEMENT_UNLOCKED
-  SYSTEM
 }
 
 model Notification {
@@ -224,23 +187,16 @@ model Notification {
   @@index([createdAt])
 }
 
-enum ChatRoomType {
-  GLOBAL
-  PRIVATE
-  PROJECT
-  ROOM
-}
-
 model ChatRoom {
   id           String                @id @default(cuid())
   name         String?
   type         ChatRoomType
   projectId    String?
+  createdAt    DateTime              @default(now())
   isPrivate    Boolean               @default(false)
   project      Project?              @relation(fields: [projectId], references: [id])
-  createdAt    DateTime              @default(now())
-  messages     Message[]
   participants ChatRoomParticipant[]
+  messages     Message[]
 
   @@index([type])
 }
@@ -250,8 +206,8 @@ model ChatRoomParticipant {
   userId     String
   chatRoomId String
   joinedAt   DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, chatRoomId])
   @@index([chatRoomId])
@@ -263,10 +219,54 @@ model Message {
   senderId   String
   content    String
   createdAt  DateTime  @default(now())
-  editedAt   DateTime?
   deletedAt  DateTime?
+  editedAt   DateTime?
   chatRoom   ChatRoom  @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
   sender     User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([chatRoomId, createdAt])
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum ProjectStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  FINISHED
+  FAILED
+}
+
+enum ResourceType {
+  LINK
+  PDF
+  VIDEO
+  ARTICLE
+  GITHUB
+  OTHER
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum NotificationType {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  HELP_REQUEST
+  PROJECT_UPDATE
+  ACHIEVEMENT_UNLOCKED
+  SYSTEM
+}
+
+enum ChatRoomType {
+  GLOBAL
+  PRIVATE
+  PROJECT
+  ROOM
 }
