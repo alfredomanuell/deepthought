@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AchievementsService } from '../achievements/achievements.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Prisma, ProjectStatus } from '@prisma/client';
 import {
   UpdateProjectStatusDto,
   CreateHelpRequestDto,
@@ -40,10 +41,21 @@ export class ProjectsService {
     const { status, needHelp, campus, page = 1, limit = 20 } = query;
     const skip = (page - 1) * limit;
 
-    // Constrói o filtro dinamicamente
-    const where: any = {
-      // Exclui projectos de utilizadores banidos
-      user: { isBanned: false },
+    /** Filtro Prisma do User relacionado, reutilizado dentro do filtro UserProject. */
+    const userWhere: Prisma.UserWhereInput = {
+      /** Exclui utilizadores banidos do Project Board público. */
+      isBanned: false,
+    };
+
+    /** Se o cliente filtrou por campus, aplica comparação case-insensitive. */
+    if (campus) {
+      userWhere.campus = { equals: campus, mode: 'insensitive' };
+    }
+
+    /** Filtro Prisma tipado para evitar `any` e proteger nomes de campos. */
+    const where: Prisma.UserProjectWhereInput = {
+      /** Exclui projectos de utilizadores banidos do board público. */
+      user: userWhere,
     };
 
     if (status) {
@@ -53,11 +65,6 @@ export class ProjectsService {
     // Filtro por flag needHelp
     if (needHelp !== undefined) {
       where.needHelp = needHelp;
-    }
-
-    // Filtro por campus do utilizador dono do projecto
-    if (campus) {
-      where.user = { ...where.user, campus: { equals: campus, mode: 'insensitive' } };
     }
 
     const [projects, total] = await this.prisma.$transaction([
@@ -102,38 +109,99 @@ export class ProjectsService {
   }
 
   /**
-   * Retorna os detalhes completos de um UserProject.
+   * Retorna os detalhes completos de um Project do catálogo global.
    * GET /projects/:id
+   * @param projectId ID do Project, não do UserProject
    */
-  async findOne(id: string) {
-    const project = await this.prisma.userProject.findUnique({
-      where: { id },
+  async findOne(projectId: string) {
+    /** Consulta o modelo Project porque a rota pública usa Project.id. */
+    const project = await this.prisma.project.findUnique({
+      /** Usa o ID do Project recebido na rota, corrigindo o bug de UserProject.id. */
+      where: { id: projectId },
+      /** Inclui relações necessárias para a página de detalhe do projecto. */
       include: {
-        project: true,
-        user: {
-          select: {
-            id: true, login: true, displayName: true,
-            avatar: true, campus: true, coalition: true, level: true,
-          },
-        },
-        // Inclui todos os pedidos de ajuda com detalhes
-        helpRequests: {
-          orderBy: { createdAt: 'desc' },
-        },
-        // Inclui todas as ofertas de ajuda
-        helpOffers: {
+        /** Lista todos os utilizadores associados a este Project via UserProject. */
+        users: {
+          /** Não expõe utilizadores banidos no detalhe público do projecto. */
+          where: { user: { isBanned: false } },
+          /** Ordena participações recentes primeiro para uma resposta estável. */
+          orderBy: { updatedAt: 'desc' },
+          /** Inclui dados do progresso do utilizador neste projecto. */
           include: {
-            helper: {
-              select: { id: true, login: true, displayName: true, avatar: true },
+            /** Inclui dados públicos do utilizador dono deste UserProject. */
+            user: {
+              /** Selecciona apenas campos seguros e úteis para UI. */
+              select: {
+                id: true,
+                login: true,
+                displayName: true,
+                avatar: true,
+                campus: true,
+                coalition: true,
+                level: true,
+              },
+            },
+            /** Inclui pedidos de ajuda ligados a este UserProject. */
+            helpRequests: {
+              /** Mostra pedidos mais recentes primeiro. */
+              orderBy: { createdAt: 'desc' },
+            },
+            /** Inclui ofertas de ajuda ligadas a este UserProject. */
+            helpOffers: {
+              /** Inclui dados públicos de quem ofereceu ajuda. */
+              include: {
+                helper: {
+                  /** Selecciona apenas campos públicos do helper. */
+                  select: {
+                    id: true,
+                    login: true,
+                    displayName: true,
+                    avatar: true,
+                  },
+                },
+              },
+              /** Mostra ofertas mais recentes primeiro. */
+              orderBy: { createdAt: 'desc' },
             },
           },
+        },
+        /** Inclui recursos associados directamente ao Project. */
+        resources: {
+          /** Mostra recursos mais recentes primeiro. */
           orderBy: { createdAt: 'desc' },
+          /** Inclui autor do recurso para contexto na UI. */
+          include: {
+            user: {
+              /** Selecciona apenas dados públicos do autor. */
+              select: {
+                id: true,
+                login: true,
+                displayName: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+        /** Inclui salas de chat associadas ao Project, se existirem no schema. */
+        chatRooms: {
+          /** Ordena salas por criação para resposta determinística. */
+          orderBy: { createdAt: 'desc' },
+          /** Inclui contagens sem carregar todas as mensagens. */
+          include: {
+            _count: {
+              /** Conta participantes e mensagens para evitar payload pesado. */
+              select: {
+                participants: true,
+                messages: true,
+              },
+            },
+          },
         },
       },
     });
 
     if (!project) {
-      throw new NotFoundException(`Project ${id} not found`);
+      throw new NotFoundException(`Project ${projectId} not found`);
     }
 
     return project;
@@ -157,10 +225,11 @@ export class ProjectsService {
       throw new NotFoundException('Project not found or you are not the owner');
     }
 
-    const updateData: any = { status: dto.status };
+    /** Dados Prisma tipados para atualizar apenas campos permitidos. */
+    const updateData: Prisma.UserProjectUpdateInput = { status: dto.status };
 
     // Regista a data de conclusão se o projecto for marcado como FINISHED
-    if (dto.status === 'FINISHED') {
+    if (dto.status === ProjectStatus.FINISHED) {
       updateData.validatedAt = new Date();
       if (dto.finalMark !== undefined) {
         updateData.finalMark = dto.finalMark;
@@ -174,7 +243,7 @@ export class ProjectsService {
     });
 
     // Se o projecto foi concluído, verifica conquistas
-    if (dto.status === 'FINISHED') {
+    if (dto.status === ProjectStatus.FINISHED) {
       setImmediate(async () => {
         try {
           await this.achievementsService.checkAchievements(userId);

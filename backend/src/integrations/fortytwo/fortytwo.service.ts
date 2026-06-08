@@ -134,15 +134,19 @@ export class FortyTwoService {
    * @param projectsUsers Lista de projetos do utilizador
    */
   private mapProjects(projectsUsers: FortyTwoProjectUser[]): MappedProject[] {
-    // Filtra apenas projetos com slug válido (ignora projetos internos da 42)
+    /** Filtra apenas projetos com slug válido para ignorar entradas internas da 42. */
     return projectsUsers
       .filter((pu) => pu.project?.slug)
       .map((pu) => ({
+        /** Slug estável da API 42 usado como chave única no Prisma Project. */
         slug: pu.project.slug,
+        /** Nome legível vindo da API 42 para manter o catálogo local actualizado. */
         name: pu.project.name,
-        status: this.mapProjectStatus(pu.status, pu.validated),
+        /** Status normalizado para o enum Prisma ProjectStatus. */
+        status: this.mapProjectStatus(pu.status),
+        /** Nota final da API 42, preservada sem inferir falha automaticamente. */
         finalMark: pu.final_mark ?? null,
-        // Converte a data de validação para objeto Date ou null
+        /** Data de marcação da API 42, usada como validatedAt local quando existe. */
         validatedAt: pu.marked_at ? new Date(pu.marked_at) : null,
       }));
   }
@@ -150,23 +154,34 @@ export class FortyTwoService {
   /**
    * Converte o status de projeto da API 42 para o enum interno ProjectStatus.
    * @param apiStatus Status vindo da API ('finished', 'in_progress', etc.)
-   * @param validated Indica se o projeto foi validado (nota >= 50)
+   * FAILED só é retornado quando a API 42 envia uma falha explícita.
    */
-  private mapProjectStatus(
-    apiStatus: string,
-    validated: boolean | null,
-  ): string {
-    // Mapa de conversão entre status da API 42 e enum interno
-    const statusMap: Record<string, string> = {
-      finished: validated ? 'FINISHED' : 'FAILED',
+  private mapProjectStatus(apiStatus: string): MappedProject['status'] {
+    /** Normaliza o texto da API 42 para evitar falhas por capitalização inesperada. */
+    const normalizedStatus = apiStatus.toLowerCase();
+
+    /** Mapa explícito entre estados da API 42 e enum Prisma ProjectStatus. */
+    const statusMap: Record<string, MappedProject['status']> = {
+      /** Projecto terminado na 42 deve ficar FINISHED, independentemente de `validated`. */
+      finished: 'FINISHED',
+      /** Projecto em progresso na 42 fica em progresso no Prisma. */
       in_progress: 'IN_PROGRESS',
+      /** Criação de grupo ainda é progresso operacional, não falha. */
       creating_group: 'IN_PROGRESS',
-      searching_a_group: 'NOT_STARTED',
+      /** Variante comum enviada pela API para criação do projecto/grupo. */
+      creating: 'IN_PROGRESS',
+      /** Procura de grupo indica que o utilizador ainda está no fluxo do projecto. */
+      searching_a_group: 'IN_PROGRESS',
+      /** Espera por avaliação ainda não é falha. */
       waiting_for_correction: 'IN_PROGRESS',
+      /** Apenas falha explícita da API vira FAILED. */
       failed: 'FAILED',
+      /** Outra variante explícita de falha fica FAILED. */
+      fail: 'FAILED',
     };
 
-    return statusMap[apiStatus] ?? 'NOT_STARTED';
+    /** Fallback seguro: estado desconhecido nunca deve virar FAILED por inferência. */
+    return statusMap[normalizedStatus] ?? 'NOT_STARTED';
   }
 
   // ─────────────────────────────────────────────────────────

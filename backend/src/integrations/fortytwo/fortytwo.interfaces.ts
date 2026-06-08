@@ -118,7 +118,7 @@ export interface MappedFortyTwoProfile {
 export interface MappedProject {
   slug: string;
   name: string;
-  status: string;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'FINISHED' | 'FAILED';
   finalMark: number | null;
   validatedAt: Date | null;
 }

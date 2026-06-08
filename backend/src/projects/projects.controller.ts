@@ -67,8 +67,9 @@ export class ProjectsController {
 
   /**
    * GET /projects/:id
-   * Retorna os detalhes completos de um UserProject.
-   * Inclui: projecto, utilizador, helpRequests, helpOffers.
+   * Retorna os detalhes completos de um Project.
+   * O parâmetro `id` é Project.id; PATCH/help continuam a usar UserProject.id.
+   * Inclui: users, resources e chatRooms.
    */
   @Get(':id')
   findOne(@Param('id') id: string) {

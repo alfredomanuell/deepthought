@@ -3,9 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
   ACHIEVEMENT_DEFINITIONS,
+  AchievementDefinition,
   UserStats,
 } from './achievements.constants';
-import { Prisma } from '@prisma/client';
+import { Achievement, ProjectStatus } from '@prisma/client';
 
 /**
  * Serviço de gestão e desbloqueio de conquistas.
@@ -92,40 +93,65 @@ export class AchievementsService {
   async checkAchievements(userId: string): Promise<void> {
     this.logger.debug(`Checking achievements for user ${userId}`);
 
-    // 1. Calcula as estatísticas actuais do utilizador
+    /** Calcula as estatísticas actuais do utilizador a partir do Prisma. */
     const stats = await this.calculateUserStats(userId);
 
-    // 2. Garante que todas as conquistas do catálogo existem na BD
+    /** Garante que o catálogo da BD reflecte o ficheiro achievements.constants.ts. */
     await this.seedAchievementsIfNeeded();
 
-    // 3. Busca as conquistas que o utilizador JÁ desbloqueou
+    /** Busca conquistas já desbloqueadas pelo utilizador com o slug da conquista. */
     const alreadyUnlocked = await this.prisma.userAchievement.findMany({
+      /** Filtra apenas registos UserAchievement deste User. */
       where: { userId },
-      select: { achievementId: true },
+      /** Inclui apenas o slug necessário para comparar com as definições locais. */
+      select: { achievement: { select: { slug: true } } },
     });
-    // Cria um Set com os IDs já desbloqueados para lookup O(1)
-    const unlockedIds = new Set(alreadyUnlocked.map((ua) => ua.achievementId));
 
-    // 4. Busca todas as conquistas da BD
-    const allAchievements = await this.prisma.achievement.findMany();
+    /** Set com slugs já desbloqueados para lookup O(1). */
+    const unlockedSlugs = new Set(
+      alreadyUnlocked.map((ua) => ua.achievement.slug),
+    );
 
-    // 5. Para cada conquista, verifica se deve ser desbloqueada
-    for (const achievement of allAchievements) {
-      // Ignora conquistas já desbloqueadas
-      if (unlockedIds.has(achievement.id)) continue;
+    /** Avalia todas as conquistas de forma independente, sem else-if e sem return prematuro. */
+    const definitionsToUnlock = ACHIEVEMENT_DEFINITIONS.filter(
+      (definition) =>
+        /** Ignora definições já desbloqueadas pelo utilizador. */
+        !unlockedSlugs.has(definition.slug) &&
+        /** Executa o critério da definição usando as stats actuais. */
+        definition.check(stats),
+    );
 
-      // Encontra a definição local da conquista pelo slug
-      const definition = ACHIEVEMENT_DEFINITIONS.find(
-        (d) => d.slug === achievement.slug,
-      );
-      if (!definition) continue;
+    /** Se nenhum critério foi cumprido, termina sem tocar na base de dados. */
+    if (definitionsToUnlock.length === 0) {
+      return;
+    }
 
-      // Verifica os critérios usando a função check() da definição
-      const shouldUnlock = definition.check(stats);
+    /** Carrega da BD apenas as conquistas que ficaram elegíveis. */
+    const achievements = await this.prisma.achievement.findMany({
+      /** Usa slug porque o catálogo local e a BD são ligados por slug único. */
+      where: {
+        slug: { in: definitionsToUnlock.map((definition) => definition.slug) },
+      },
+    });
 
-      if (shouldUnlock) {
-        await this.unlockAchievement(userId, achievement);
+    /** Mapa slug -> Achievement para ligar definição local ao registo Prisma. */
+    const achievementBySlug = new Map(
+      achievements.map((achievement) => [achievement.slug, achievement]),
+    );
+
+    /** Percorre todas as definições elegíveis para permitir múltiplos unlocks no mesmo run. */
+    for (const definition of definitionsToUnlock) {
+      /** Obtém o registo Achievement correspondente ao slug da definição. */
+      const achievement = achievementBySlug.get(definition.slug);
+
+      /** Protecção defensiva: se o seed falhou, não tenta criar UserAchievement inválido. */
+      if (!achievement) {
+        this.logger.warn(`Achievement ${definition.slug} is missing from database`);
+        continue;
       }
+
+      /** Desbloqueia a conquista de forma idempotente e segura contra duplicados. */
+      await this.unlockAchievement(userId, achievement, definition);
     }
   }
 
@@ -140,43 +166,60 @@ export class AchievementsService {
    * @param userId ID do utilizador
    * @param achievement Conquista a desbloquear
    */
-  private async unlockAchievement(userId: string, achievement: any): Promise<void> {
+  private async unlockAchievement(
+    userId: string,
+    achievement: Achievement,
+    definition: AchievementDefinition,
+  ): Promise<void> {
     this.logger.log(`Unlocking achievement ${achievement.slug} for user ${userId}`);
 
-    try {
-      // Usa transação para garantir que o XP e o unlock são atómicos
-      await this.prisma.$transaction([
-        // Cria o registo de conquista desbloqueada
-        this.prisma.userAchievement.create({
-          data: {
-            userId,
-            achievementId: achievement.id,
-          },
-        }),
-        // Adiciona o XP ao utilizador
-        this.prisma.user.update({
-          where: { id: userId },
-          data: {
-            xp: { increment: achievement.xpReward },
-          },
-        }),
-      ]);
+    /** Executa o unlock numa transação interactiva para só dar XP se houve insert real. */
+    const created = await this.prisma.$transaction(async (tx) => {
+      /** Cria UserAchievement respeitando @@unique([userId, achievementId]). */
+      const result = await tx.userAchievement.createMany({
+        /** skipDuplicates transforma corrida concorrente em operação idempotente. */
+        skipDuplicates: true,
+        /** Dados da relação entre User e Achievement. */
+        data: {
+          /** User interno que recebeu a conquista. */
+          userId,
+          /** Achievement da tabela seeded a partir das constantes. */
+          achievementId: achievement.id,
+        },
+      });
 
-      // Cria notificação fora da transação (não é crítico)
-      await this.notificationsService.notifyAchievementUnlocked(
-        userId,
-        achievement.title,
-        achievement.xpReward,
-      );
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        this.logger.debug(`Achievement ${achievement.slug} already unlocked for ${userId}`);
-        return;
+      /** Se count é 0, a unique constraint já existia e nenhum XP deve ser somado. */
+      if (result.count === 0) {
+        return false;
       }
-      throw error;
+
+      /** Incrementa o XP local apenas quando a conquista foi criada agora. */
+      await tx.user.update({
+        /** Actualiza o mesmo User que recebeu o UserAchievement. */
+        where: { id: userId },
+        /** Usa incremento atómico do Prisma para evitar perder XP em concorrência. */
+        data: { xp: { increment: achievement.xpReward } },
+      });
+
+      /** Indica ao código fora da transação que a notificação deve ser enviada. */
+      return true;
+    });
+
+    /** Se não criou nada, a conquista já existia e não há notificação duplicada. */
+    if (!created) {
+      this.logger.debug(`Achievement ${achievement.slug} already unlocked for ${userId}`);
+      return;
     }
+
+    /** Cria notificação fora da transação porque falha de notificação não deve reverter XP. */
+    await this.notificationsService.notifyAchievementUnlocked(
+      /** Utilizador que acabou de desbloquear a conquista. */
+      userId,
+      /** Título vindo da definição local para manter texto alinhado ao catálogo. */
+      definition.title,
+      /** XP real guardado no Achievement da BD. */
+      achievement.xpReward,
+    );
   }
 
   /**
@@ -184,34 +227,60 @@ export class AchievementsService {
    * @param userId ID do utilizador
    */
   private async calculateUserStats(userId: string): Promise<UserStats> {
-    // Executa todas as queries em paralelo para melhor performance
-    const [user, helpOffersCount] = await Promise.all([
+    /** Executa query do User e contagem de ajudas em paralelo para reduzir latência. */
+    const [user, completedProjects, helpOffersCount] = await Promise.all([
+      /** Busca apenas campos do User usados pelo motor de conquistas. */
       this.prisma.user.findUnique({
+        /** Usa o ID interno da aplicação. */
         where: { id: userId },
+        /** Selecciona só métricas necessárias para evitar payload desnecessário. */
         select: {
+          /** Nível sincronizado da API 42. */
           level: true,
+          /** Pontos de avaliação sincronizados da API 42. */
           evalPoints: true,
-          // Conta apenas projectos concluídos
-          projects: {
-            where: { status: 'FINISHED' },
-            select: { id: true },
-          },
         },
       }),
-      // Conta o número de ajudas oferecidas pelo utilizador
+      /** Conta UserProject concluídos sem carregar todos os registos. */
+      this.prisma.userProject.count({
+        /** Filtra pelo User interno e pelo enum FINISHED do Prisma. */
+        where: {
+          /** Relação UserProject pertence ao utilizador avaliado. */
+          userId,
+          /** Apenas projectos realmente concluídos contam para FIRST_PROJECT/TEN_PROJECTS. */
+          status: ProjectStatus.FINISHED,
+        },
+      }),
+      /** Conta ofertas de ajuda dadas pelo utilizador para HELPER/MASTER_HELPER. */
       this.prisma.projectHelpOffer.count({
+        /** helperId aponta para User.id de quem ofereceu ajuda. */
         where: { helperId: userId },
       }),
     ]);
 
+    /** Se o User não existe, devolve stats neutras e evita erro em chamadas assíncronas antigas. */
     if (!user) {
-      return { completedProjects: 0, level: 0, evalPoints: 0, helpOffersGiven: 0 };
+      return {
+        /** Nenhum projecto concluído porque o utilizador não existe. */
+        completedProjects: 0,
+        /** Sem User, nível efectivo é zero. */
+        level: 0,
+        /** Sem User, evaluation points são zero. */
+        evalPoints: 0,
+        /** Sem User, ofertas de ajuda são zero. */
+        helpOffersGiven: 0,
+      };
     }
 
+    /** Devolve stats normalizadas para as funções check() das definições. */
     return {
-      completedProjects: user.projects.length,
+      /** Contagem Prisma de UserProject com status FINISHED. */
+      completedProjects,
+      /** Nível actual persistido após sync da API 42. */
       level: user.level,
+      /** Pontos de avaliação persistidos após sync da API 42. */
       evalPoints: user.evalPoints,
+      /** Contagem Prisma de ProjectHelpOffer criados pelo utilizador. */
       helpOffersGiven: helpOffersCount,
     };
   }
@@ -222,24 +291,34 @@ export class AchievementsService {
    * Chamado automaticamente pelo checkAchievements().
    */
   private async seedAchievementsIfNeeded(): Promise<void> {
-    for (const def of ACHIEVEMENT_DEFINITIONS) {
-      await this.prisma.achievement.upsert({
-        where: { slug: def.slug },
-        create: {
-          slug: def.slug,
-          title: def.title,
-          description: def.description,
-          icon: def.icon,
-          xpReward: def.xpReward,
-        },
-        // Actualiza título/descrição se a definição mudar
-        update: {
-          title: def.title,
-          description: def.description,
-          icon: def.icon,
-          xpReward: def.xpReward,
-        },
-      });
-    }
+    /** Executa os upserts em paralelo porque cada slug é independente e único. */
+    await Promise.all(
+      ACHIEVEMENT_DEFINITIONS.map((def) =>
+        /** Upsert mantém a tabela Achievement alinhada com o ficheiro constants. */
+        this.prisma.achievement.upsert({
+          /** slug é único no schema Prisma e liga código local ao registo da BD. */
+          where: { slug: def.slug },
+          /** Dados usados quando a conquista ainda não existe. */
+          create: {
+            slug: def.slug,
+            title: def.title,
+            description: def.description,
+            icon: def.icon,
+            xpReward: def.xpReward,
+          },
+          /** Dados usados quando a conquista já existe. */
+          update: {
+            /** Mantém título sincronizado com constants. */
+            title: def.title,
+            /** Mantém descrição sincronizada com constants. */
+            description: def.description,
+            /** Mantém ícone sincronizado com constants. */
+            icon: def.icon,
+            /** Mantém recompensa XP sincronizada com constants. */
+            xpReward: def.xpReward,
+          },
+        }),
+      ),
+    );
   }
 }
