@@ -1,13 +1,36 @@
-import {
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { SyncService } from '../sync/sync.service';
 import { FortyTwoService } from '../integrations/fortytwo/fortytwo.service';
+import { OtpService, OtpTokens } from './otp/otp.service';
+
+/** Resposta quando o primeiro login precisa validar OTP antes de receber JWT. */
+export interface RequiresOtpResponse {
+  /** Sinaliza ao frontend que deve abrir o ecrã de OTP. */
+  requiresOtp: true;
+  /** ID interno usado pelo POST /auth/otp/verify junto com o código. */
+  userId: string;
+}
+
+/** Resposta normal para utilizadores já verificados. */
+export interface AuthTokensResponse extends OtpTokens {
+  /** Alias temporário para manter compatibilidade com o cookie antigo. */
+  access_token: string;
+  /** Dados públicos mínimos para o frontend após autenticação. */
+  user: {
+    id: string;
+    login: string;
+    displayName: string;
+    avatar: string | null;
+    campus: string | null;
+    level: number;
+    role: string;
+  };
+}
+
+/** União dos dois caminhos possíveis depois do OAuth da 42. */
+export type Login42Response = RequiresOtpResponse | AuthTokensResponse;
 
 /**
  * Serviço de autenticação — responsável pelo fluxo OAuth2 com a 42.
@@ -16,8 +39,9 @@ import { FortyTwoService } from '../integrations/fortytwo/fortytwo.service';
  * 1. Recebe o accessToken OAuth2 da callback da 42
  * 2. Busca o perfil do utilizador na API 42
  * 3. Cria o utilizador se for o primeiro login
- * 4. Gera o JWT interno
- * 5. Inicia sync assíncrono para actualizar dados
+ * 4. Se isEmailVerified=false, envia OTP e não gera JWT
+ * 5. Se isEmailVerified=true, gera JWT imediatamente
+ * 6. Inicia sync assíncrono para actualizar dados
  */
 @Injectable()
 export class AuthService {
@@ -26,14 +50,14 @@ export class AuthService {
   constructor(
     /** Acesso à base de dados */
     private readonly prisma: PrismaService,
-    /** Geração e validação de JWTs */
-    private readonly jwtService: JwtService,
     /** Gestão de utilizadores */
     private readonly usersService: UsersService,
     /** Serviço de sincronização com a API 42 */
     private readonly syncService: SyncService,
     /** Wrapper da API 42 */
     private readonly fortyTwoService: FortyTwoService,
+    /** Serviço que gere OAuth -> OTP -> JWT no primeiro login */
+    private readonly otpService: OtpService,
   ) {}
 
   /**
@@ -41,9 +65,9 @@ export class AuthService {
    * Cria o utilizador se for novo, ou actualiza lastSeenAt se já existir.
    * Desencadeia sync assíncrono após login.
    * @param accessToken Token OAuth2 obtido da callback da 42
-   * @returns JWT de acesso e dados do utilizador
+   * @returns Pedido de OTP no primeiro login ou JWTs nos logins seguintes
    */
-  async login42(accessToken: string): Promise<{ access_token: string; user: any }> {
+  async login42(accessToken: string): Promise<Login42Response> {
     this.logger.log('Processing 42 OAuth login');
 
     // Busca o perfil completo na API 42
@@ -65,23 +89,13 @@ export class AuthService {
       });
     }
 
-    // Gera o JWT com sub (ID do utilizador), role e o accessToken OAuth2
-    // O accessToken é guardado no JWT para permitir chamadas à API 42
-    const jwt = await this.jwtService.signAsync({
-      sub: user.id,
-      role: user.role,
-      // Inclui o accessToken OAuth2 para o SyncService poder usar
-      accessToken,
-    });
-
     // Inicia o sync de forma assíncrona (não bloqueia o login)
     // Usa setImmediate para não atrasar a resposta ao cliente
     setImmediate(async () => {
       try {
         await this.syncService.syncUser(user!.id, accessToken);
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error ? error.message : String(error);
 
         this.logger.warn(
           `Background sync failed for user ${user!.id}: ${message}`,
@@ -89,8 +103,25 @@ export class AuthService {
       }
     });
 
+    // Primeiro login: email ainda não foi verificado por OTP nesta aplicação.
+    // Nesta situação não emitimos JWT, para impedir sessão antes da validação.
+    if (user.isEmailVerified === false) {
+      await this.otpService.generateAndSendOtp(user);
+
+      return {
+        requiresOtp: true,
+        userId: user.id,
+      };
+    }
+
+    // Logins futuros: o OTP já foi validado no passado, por isso segue normal.
+    // O accessToken OAuth2 é incluído no JWT para permitir sync manual com a 42.
+    const tokens = await this.otpService.issueTokens(user, accessToken);
+
     return {
-      access_token: jwt,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      access_token: tokens.accessToken,
       user: {
         id: user.id,
         login: user.login,

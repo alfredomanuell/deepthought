@@ -268,7 +268,7 @@ export class UsersService {
         level: profile.level,
         evalPoints: profile.evalPoints,
         xp: Math.round(profile.level * 1000),
-        isEmailVerified: true, // Email da 42 é sempre verificado
+        isEmailVerified: false, // Primeiro login deve validar OTP antes de receber JWT
         lastSyncAt: new Date(),
         lastSeenAt: new Date(),
       },
@@ -320,7 +320,7 @@ export class UsersService {
    * @param user Objecto completo do utilizador
    */
   private sanitizeUser(user: any) {
-    const { refreshTokenHash, emailCodes, ...safe } = user;
+    const { refreshTokenHash, otpCode, otpExpiresAt, ...safe } = user;
     return safe;
   }
 
@@ -329,9 +329,8 @@ export class UsersService {
    * @param user Utilizador com relações carregadas
    */
   private calculateStats(user: any) {
-    const completedProjects = user.projects?.filter(
-      (p: any) => p.status === 'FINISHED',
-    ).length ?? 0;
+    const completedProjects =
+      user.projects?.filter((p: any) => p.status === 'FINISHED').length ?? 0;
 
     const totalAchievements = user.achievements?.length ?? 0;
 

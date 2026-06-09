@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Req,
-  UseGuards,
-  Res,
-} from '@nestjs/common';
+import { Controller, Get, Req, UseGuards, Res } from '@nestjs/common';
 
 import { AuthGuard } from '@nestjs/passport';
 
@@ -14,10 +8,7 @@ import type { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
-
-  constructor(
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Get('42/login')
   @UseGuards(AuthGuard('42'))
@@ -26,17 +17,23 @@ export class AuthController {
   @Get('42/callback')
   @UseGuards(AuthGuard('42'))
   async callback(@Req() req, @Res() res: Response) {
-    const tokens = await this.authService.login42(
-      req.user.accessToken,
-    );
+    /** O accessToken vem da strategy OAuth2 da 42 depois da callback. */
+    const result = await this.authService.login42(req.user.accessToken);
 
-  res.cookie('access_token', tokens.access_token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 24,
-  });
+    /** Primeiro login: responde JSON para o frontend pedir o código OTP. */
+    if ('requiresOtp' in result) {
+      return res.json(result);
+    }
 
-  return res.redirect(`${process.env.FRONTEND_URL}/game`,);
+    /** Login futuro: guarda o access token em cookie httpOnly como antes. */
+    res.cookie('access_token', result.accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24,
+    });
+
+    /** Depois de autenticado com JWT, redirecciona para a aplicação. */
+    return res.redirect(`${process.env.FRONTEND_URL}/game`);
   }
 }

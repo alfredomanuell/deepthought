@@ -10,6 +10,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
 import { SyncModule } from '../sync/sync.module';
 import { FortyTwoModule } from '../integrations/fortytwo/fortytwo.module';
+import { OtpModule } from './otp/otp.module';
 
 /**
  * Módulo de autenticação.
@@ -22,6 +23,7 @@ import { FortyTwoModule } from '../integrations/fortytwo/fortytwo.module';
     UsersModule,
     SyncModule,
     FortyTwoModule,
+    OtpModule,
     PassportModule,
     // Configuração assíncrona do JWT usando ConfigService
     JwtModule.registerAsync({
@@ -34,11 +36,7 @@ import { FortyTwoModule } from '../integrations/fortytwo/fortytwo.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    FortyTwoStrategy,
-    JwtStrategy,
-  ],
+  providers: [AuthService, FortyTwoStrategy, JwtStrategy],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
