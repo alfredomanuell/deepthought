@@ -14,9 +14,8 @@ export default function SignIn() {
 						Exclusively for 42 Network students
 					</div>
 
-					<CustomButton route="/" name="Login with 42" />
+					<CustomButton route= "https://premiere-crook-saggy.ngrok-free.dev/auth/42/login" name="Login with 42" />
 					<div className="flex flex-col pt-4">
-						<NavLink className="font-pressStart text-contrast hover:text-secundary transition text-xs" to={"/emailSignIn"}>Or login with email</NavLink>
 						<NavLink className="font-pressStart text-contrast underline hover:text-secundary transition text-xs" to={"/Game"}>Open game(beta)</NavLink>
 					</div>
 
