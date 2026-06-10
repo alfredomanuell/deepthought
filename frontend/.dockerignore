@@ -1,0 +1,14 @@
+# Não envia dependências locais para o build Docker.
+node_modules
+
+# Não envia builds locais para a imagem.
+dist
+
+# Evita caches e logs no contexto.
+.cache
+coverage
+*.log
+npm-debug.log*
+
+# Mantém variáveis locais fora da imagem.
+.env
