@@ -41,11 +41,11 @@ logs-postgres:
 
 # Executa as migrações do Prisma e gera o cliente dentro do container do backend.
 prisma-dev:
-	$(COMPOSE) run --rm backend bash -c "npx prisma migrate dev && npx prisma generate"
+	$(COMPOSE) run --rm backend sh -c "npx prisma migrate dev && npx prisma generate"
 
 # Executa as migrações do Prisma e gera o cliente para produção, sem prompt de confirmação.
 prisma-prod:
-	$(COMPOSE) run --rm backend bash -c "npx prisma migrate deploy && npx prisma generate"
+	$(COMPOSE) run --rm backend sh -c "npx prisma migrate deploy && npx prisma generate"
 
 # Abre o Prisma Studio.
 studio:
