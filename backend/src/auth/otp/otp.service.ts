@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import { MailService } from '../../mail/mail.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -17,10 +17,22 @@ const OTP_TTL_MINUTES = 10;
 
 /** Resultado devolvido após o OTP ser validado com sucesso. */
 export interface OtpTokens {
+  /** Confirma ao frontend que o fluxo OTP -> JWT terminou com sucesso. */
+  success: true;
   /** JWT curto usado para autenticar requests protegidos. */
   accessToken: string;
   /** JWT longo usado para renovar sessão no frontend. */
   refreshToken: string;
+}
+
+/** Payload mínimo esperado dentro de um refresh token assinado pelo backend. */
+interface RefreshTokenPayload {
+  /** ID interno do utilizador autenticado. */
+  sub: string;
+  /** Role guardado no momento da emissão; a BD continua a ser a fonte canónica. */
+  role?: Role;
+  /** Marcador que impede usar accessToken no endpoint /auth/refresh. */
+  type?: string;
 }
 
 /**
@@ -131,6 +143,48 @@ export class OtpService {
   }
 
   /**
+   * Valida um refresh token existente e emite um novo par access/refresh.
+   *
+   * Este método suporta o frontend protegido sem recriar JWTService: reutiliza
+   * o JwtService injectado, o hash persistido em User.refreshTokenHash e o
+   * mesmo issueTokens usado depois do OAuth/OTP.
+   */
+  async refreshTokens(refreshToken: string): Promise<OtpTokens> {
+    let payload: RefreshTokenPayload;
+
+    try {
+      /** Verifica assinatura/expiração antes de consultar a base de dados. */
+      payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(
+        refreshToken,
+      );
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    /** O campo type impede que um accessToken seja aceite como refreshToken. */
+    if (!payload.sub || payload.type !== 'refresh') {
+      throw new UnauthorizedException('Invalid refresh token payload');
+    }
+
+    /** Busca o utilizador actual para respeitar banimentos e comparar o hash guardado. */
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+
+    if (!user || user.isBanned || !user.refreshTokenHash) {
+      throw new UnauthorizedException('Refresh token is no longer valid');
+    }
+
+    /** Apenas o refresh token mais recente é aceite, reduzindo replay de tokens antigos. */
+    if (user.refreshTokenHash !== this.hashToken(refreshToken)) {
+      throw new UnauthorizedException('Refresh token was rotated');
+    }
+
+    /** Reutiliza a emissão centralizada para actualizar hash e devolver novo par JWT. */
+    return this.issueTokens(user);
+  }
+
+  /**
    * Emite accessToken e refreshToken para o utilizador verificado.
    *
    * @param user Utilizador já persistido como isEmailVerified=true.
@@ -171,8 +225,8 @@ export class OtpService {
       data: { refreshTokenHash: this.hashToken(refreshToken) },
     });
 
-    /** Apenas os tokens são devolvidos; OTP e expiração nunca saem para o frontend. */
-    return { accessToken, refreshToken };
+    /** Apenas sucesso e tokens são devolvidos; OTP e expiração nunca saem para o frontend. */
+    return { success: true, accessToken, refreshToken };
   }
 
   /** Remove o OTP do utilizador quando expira ou quando deixa de ser utilizável. */

@@ -116,6 +116,7 @@ export class AuthService {
     const tokens = await this.otpService.issueTokens(user, accessToken);
 
     return {
+      success: tokens.success,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       access_token: tokens.accessToken,

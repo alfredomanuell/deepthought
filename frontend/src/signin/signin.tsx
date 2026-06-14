@@ -1,7 +1,11 @@
-import { Link, NavLink } from "react-router"
+import { Link, NavLink } from "react-router-dom"
 import CustomButton from "../components/CustomButton"
+import { API_BASE_URL } from "../config/api"
 
 export default function SignIn() {
+	// O botão não chama a API por fetch: ele transfere o browser para o fluxo OAuth da 42.
+	const fortyTwoLoginUrl = `${API_BASE_URL}/auth/42/login`
+
 	return (
 			<div className="px-8 w-[500px] space-y-16 pt-8 bg-neutral_contrast flex items-center justify-between flex-col text-center  border-b-8 border-r-8 border-l-4 border-t-4 border-black">
 
@@ -14,7 +18,7 @@ export default function SignIn() {
 						Exclusively for 42 Network students
 					</div>
 
-					<CustomButton route= "https://premiere-crook-saggy.ngrok-free.dev/auth/42/login" name="Login with 42" />
+					<CustomButton route={fortyTwoLoginUrl} name="Login with 42" />
 					<div className="flex flex-col pt-4">
 						<NavLink className="font-pressStart text-contrast underline hover:text-secundary transition text-xs" to={"/Game"}>Open game(beta)</NavLink>
 					</div>

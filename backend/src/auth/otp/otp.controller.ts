@@ -13,7 +13,7 @@ export class OtpController {
   /** Endpoint POST /auth/otp/verify para trocar OTP válido por JWTs. */
   @Post('verify')
   async verify(@Body() dto: VerifyOtpDto): Promise<OtpTokens> {
-    /** Encaminha o DTO validado para o service executar validação e emissão. */
+    /** Encaminha o DTO validado para executar OAuth -> OTP válido -> JWT sem recriar serviços. */
     return this.otpService.verifyOtp(dto);
   }
 }

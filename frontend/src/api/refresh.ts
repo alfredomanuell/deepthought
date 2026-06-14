@@ -1,9 +1,12 @@
+import { API_BASE_URL } from '../config/api'
+
 export async function refreshToken() {
   const refreshToken = localStorage.getItem('refreshToken')
 
   if (!refreshToken) return false
 
-  const response = await fetch('http://localhost:3000/auth/refresh', {
+  /** Usa a mesma origem backend do OAuth/OTP para evitar refresh contra localhost errado. */
+  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
