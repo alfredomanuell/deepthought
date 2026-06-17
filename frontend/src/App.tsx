@@ -1,7 +1,6 @@
 import "./App.css"
 
 export default function App({CustomComponent} : {CustomComponent : any}) {
-  console.log(CustomComponent)
   return (
     <>
       <div className="bg-background stars min-h-screen">

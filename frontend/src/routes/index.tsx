@@ -48,14 +48,14 @@ export function AppRouter() {
 				path="/Game"
 				element={
 					<ProtectedRoute>
-						<PhaserGame />
+						<App CustomComponent={PhaserGame} />
 					</ProtectedRoute>
 				}
 			/>
 
 			<Route
 				path="/GameDebug"
-				element={<PhaserGame />}
+					element={<App CustomComponent={PhaserGame} />}
 			/>
 
 		</Routes>
