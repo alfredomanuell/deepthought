@@ -3,14 +3,14 @@ import { setupCamera } from "./setupCamera";
 import { setupUI } from "./setupUI";
 import { setupInput } from "./setupInput";
 import { setupMap } from "./setupMap";
-import { cartToIso, isoToCart } from "./isometricUtils";
+import { cartToIso } from "./isometricUtils";
 import { toLocal, isValidTile } from "./mapCoords";
 import { Player } from "./player";
 
 class GameScene extends Phaser.Scene {
 	private offsetX = 0;
 	private offsetY = 0;
-	private map?: Phaser.Tilemaps.Tilemap;
+	private floorsLayer?: Phaser.Tilemaps.TilemapLayer | Phaser.Tilemaps.TilemapGPULayer | null;
 	private highlight?: Phaser.GameObjects.Image;
 	private player?: Player;
 
@@ -36,8 +36,8 @@ class GameScene extends Phaser.Scene {
 		);
 		uiCamera.setScroll(0, 0);
 
-		const { map } = setupMap(this, this.offsetX, this.offsetY);
-		this.map = map;
+		const { map, floorsLayer } = setupMap(this, this.offsetX, this.offsetY);
+		this.floorsLayer = floorsLayer;
 		setupCamera(this, map, this.offsetX, this.offsetY);
 		setupInput(this);
 		setupUI(this, this.cameras.main);
@@ -53,39 +53,42 @@ class GameScene extends Phaser.Scene {
 		// ── Click to move ─────────────────────────────────────────────────────
 		// Convert the click's world tile coord → local, validate, then move.
 		this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-			const worldX = pointer.worldX - this.offsetX;
-			const worldY = pointer.worldY - this.offsetY;
+			const tile = this.floorsLayer?.getTileAtWorldXY(
+				pointer.worldX,
+				pointer.worldY,
+				true,
+				this.cameras.main,
+			);
 
-			const { x: wx, y: wy } = isoToCart(worldX, worldY);
-			const { lx, ly }       = toLocal(wx, wy);
-
-			if (isValidTile(lx, ly)) {
-				this.player?.setLocalTile(lx, ly);
+			if (tile) {
+				const { lx, ly } = toLocal(tile.x, tile.y);
+				if (isValidTile(lx, ly)) {
+					this.player?.setLocalTile(lx, ly);
+				}
 			}
 		});
 	}
 
 	update(_time: number, _delta: number): void {
-		const worldX = this.input.activePointer.worldX - this.offsetX;
-		const worldY = this.input.activePointer.worldY - this.offsetY;
+		const tile = this.floorsLayer?.getTileAtWorldXY(
+			this.input.activePointer.worldX,
+			this.input.activePointer.worldY,
+			true,
+			this.cameras.main,
+		);
 
-		const { x: hoverX, y: hoverY } = isoToCart(worldX, worldY);
-		const { lx, ly }               = toLocal(hoverX, hoverY);
-		const valid                    = isValidTile(lx, ly);
-
-		if (
-			this.map &&
-			hoverX >= 0 && hoverX < this.map.width &&
-			hoverY >= 0 && hoverY < this.map.height
-		) {
-			const isoPos = cartToIso(hoverX, hoverY);
-			this.highlight?.setPosition(isoPos.x + this.offsetX, isoPos.y + this.offsetY);
-			this.highlight?.setTint(valid ? 0xffffff : 0xff4444);
-			this.highlight?.setVisible(true);
-			this.highlight?.setDepth(0.5);
-		} else {
+		if (!tile) {
 			this.highlight?.setVisible(false);
+			return;
 		}
+
+		const { lx, ly } = toLocal(tile.x, tile.y);
+		const valid = isValidTile(lx, ly);
+		const isoPos = cartToIso(tile.x, tile.y);
+		this.highlight?.setPosition(isoPos.x + this.offsetX, isoPos.y + this.offsetY);
+		this.highlight?.setTint(valid ? 0xffffff : 0xff4444);
+		this.highlight?.setVisible(true);
+		this.highlight?.setDepth(0.5);
 	}
 }
 

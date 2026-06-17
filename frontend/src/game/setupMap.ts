@@ -3,9 +3,9 @@ import { TILE_WIDTH, TILE_HEIGHT } from "./constants";
 
 export interface MapLayers {
 	map: Phaser.Tilemaps.Tilemap;
-	floorsLayer: Phaser.Tilemaps.TilemapLayer | null;
-	propsLayer: Phaser.Tilemaps.TilemapLayer | null;
-	wallsLayer: Phaser.Tilemaps.TilemapLayer | null;
+	floorsLayer: Phaser.Tilemaps.TilemapLayer | Phaser.Tilemaps.TilemapGPULayer | null;
+	propsLayer: Phaser.Tilemaps.TilemapLayer | Phaser.Tilemaps.TilemapGPULayer | null;
+	wallsLayer: Phaser.Tilemaps.TilemapLayer | Phaser.Tilemaps.TilemapGPULayer | null;
 }
 
 export function setupMap(scene: Phaser.Scene, offsetX: number, offsetY: number): MapLayers {
