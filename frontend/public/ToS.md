@@ -1,12 +1,13 @@
 # Termos de Serviço
 
-**42 Social Cluster**
-Última atualização: 20 de maio de 2026
+**42's Deepthought**
+
+Última atualização: 17 de Junho de 2026
 
 
 ## 1. Aceitação dos Termos
 
-Ao aceder ou utilizar o **42 Social Cluster** ("Plataforma", "nós", "nos" ou "nosso"), você concorda em ficar vinculado a estes Termos de Serviço ("Termos"). Se não concordar com algum dos termos aqui descritos, não deverá utilizar a Plataforma.
+Ao aceder ou utilizar o **42's Deepthought**, você concorda em ficar vinculado a estes Termo de Serviço. Se não concordar com algum dos termos aqui descritos, não deverá utilizar a Plataforma.
 
 A Plataforma é destinada exclusivamente a estudantes ativos da rede 42, verificados através da autenticação com a Intranet 42.
 
@@ -17,7 +18,7 @@ Para criar uma conta e utilizar a Plataforma, você deve:
 
 - Ser estudante ativo ou alumni da rede 42
 - Possuir uma conta válida na Intranet 42, ou registar-se com um endereço de e-mail verificável
-- Ter pelo menos 16 anos de idade
+- Ter pelo menos 17 anos de idade
 - Não ter sido previamente banido da Plataforma
 
 O acesso pode ser revogado a qualquer momento se estas condições deixarem de ser cumpridas.
@@ -27,7 +28,7 @@ O acesso pode ser revogado a qualquer momento se estas condições deixarem de s
 
 ### 3.1 Registo
 Pode criar conta através de:
-- **E-mail e password**: fornecendo um endereço de e-mail válido e uma password segura
+- **E-mail e password**: fornecendo um endereço de e-mail registrado no Intranet e uma password segura
 - **OAuth 42**: autenticando com a sua conta da Intranet 42
 
 ### 3.2 Segurança da conta
@@ -39,7 +40,7 @@ Você é responsável por:
 Recomendamos fortemente a ativação da autenticação de dois fatores (2FA).
 
 ### 3.3 Nome de utilizador
-O nome de utilizador deve ser único, adequado e não pode imitar outros utilizadores, marcas ou personalidades de forma enganosa.
+O nome de utilizador será único de acordo com o Intranet.
 
 
 ## 4. Utilização Aceitável
@@ -134,14 +135,14 @@ Na máxima extensão permitida pela lei aplicável, não somos responsáveis por
 - Interrupções de serviço
 - Decisões tomadas com base em informações exibidas na Plataforma
 
-Esta Plataforma é um projeto académico desenvolvido no âmbito do curso da rede 42, sem fins lucrativos, e não deve ser usada para fins críticos ou profissionais.
+Esta Plataforma é um projeto académico desenvolvido no âmbito do curso da rede 42, sem fins lucrativos.
 
 
 ## 11. Contacto
 
 Para questões relacionadas com estes Termos, reportes de abuso, pedidos de eliminação de conta ou apelações de banimento:
 
-**termos@42social.cluster**
+**terms@42deepthought.com**
 
 Ou utilize o sistema de feedback integrado na Plataforma.
 
@@ -155,5 +156,3 @@ Podemos atualizar estes Termos periodicamente. Alterações significativas serã
 
 Estes Termos são regidos pelas leis aplicáveis ao país onde o projeto é desenvolvido e avaliado, sem prejuízo das normas da rede 42 que se sobreponham.
 
-
-*Este documento é fictício e foi criado para fins académicos no âmbito do projeto ft_transcendence da rede 42.*

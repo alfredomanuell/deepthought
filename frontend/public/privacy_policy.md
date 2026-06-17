@@ -1,11 +1,12 @@
 # Política de Privacidade
 
-**42 Social Cluster**
-Última atualização: 20 de maio de 2026
+**42's Deepthought**
+
+Última atualização: 17 de Junho de 2026
 
 ## 1. Introdução
 
-Bem-vindo ao **42 Social Cluster** ("Plataforma", "nós", "nos" ou "nosso"). A sua privacidade é importante para nós. Esta Política de Privacidade descreve como recolhemos, usamos, armazenamos e protegemos as suas informações pessoais quando utiliza a nossa Plataforma, acessível exclusivamente a estudantes da rede 42.
+Bem-vindo ao **42's Deepthought**. A sua privacidade é importante para nós. Esta Política de Privacidade descreve como recolhemos, usamos, armazenamos e protegemos as suas informações pessoais quando utiliza a nossa Plataforma, acessível exclusivamente a estudantes da rede 42.
 
 Ao criar uma conta ou aceder à Plataforma, você concorda com os termos descritos neste documento.
 
@@ -79,10 +80,7 @@ Retemos os seus dados enquanto a sua conta estiver ativa. Se eliminar a sua cont
 Você tem o direito de:
 
 - **Aceder** aos dados pessoais que guardamos sobre si
-- **Corrigir** informações incorretas no seu perfil
 - **Eliminar** a sua conta e os dados associados
-- **Exportar** os seus dados em formato legível
-- **Revogar** o acesso OAuth da 42 a qualquer momento através da Intranet
 
 Para exercer qualquer um destes direitos, contacte-nos através dos meios indicados na secção 10.
 
@@ -98,13 +96,13 @@ Não utilizamos cookies de rastreamento publicitário ou de terceiros.
 
 ## 9. Menores de Idade
 
-A Plataforma é destinada exclusivamente a estudantes matriculados na rede 42. O acesso requer autenticação com uma conta válida da Intranet 42. Não recolhemos intencionalmente dados de menores de 16 anos fora do contexto da sua inscrição na 42.
+A Plataforma é destinada exclusivamente a estudantes matriculados na rede 42. O acesso requer autenticação com uma conta válida da Intranet 42. Não recolhemos intencionalmente dados de menores de 17 anos fora do contexto da sua inscrição na 42.
 
 ## 10. Contacto
 
-Para questões relacionadas com privacidade, pedidos de acesso ou eliminação de dados, contacte a equipa responsável pela Plataforma através do sistema de feedback disponível na aplicação ou pelo e-mail fictício:
+Para questões relacionadas com privacidade, pedidos de acesso ou eliminação de dados, contacte a equipa responsável pela Plataforma através do sistema de feedback disponível na aplicação ou pelo e-mail:
 
-**privacidade@42social.cluster**
+**privacy@42deepthoght.com**
 
 ## 11. Alterações a esta Política
 
@@ -112,4 +110,3 @@ Podemos atualizar esta Política de Privacidade periodicamente. Quando o fizermo
 
 O uso continuado da Plataforma após as alterações constitui aceitação da nova Política.
 
-*Este documento é fictício e foi criado para fins académicos no âmbito do projeto ft_transcendence da rede 42.*
