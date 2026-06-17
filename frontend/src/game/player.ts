@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { cartToIso } from "./isometricUtils";
 import { toWorld } from "./mapCoords";
+import { TILE_HEIGHT } from "./constants";
 
 /**
  * Player
@@ -77,7 +78,6 @@ export class Player {
         // The +TILE_HEIGHT/2 shifts the anchor to the bottom-centre of the
         // tile diamond so the player appears to stand ON the tile, not above it.
         // Adjust the Y nudge here if the player floats or sinks into the floor.
-        const TILE_HEIGHT = 32;
         this.visual.setPosition(
             iso.x + this.offsetX + 32,      // +32 = half tile width, centres on diamond
             iso.y + this.offsetY + TILE_HEIGHT, // +TILE_HEIGHT, sits on tile surface
