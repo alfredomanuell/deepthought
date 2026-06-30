@@ -28,7 +28,7 @@ function PanelContent({ panel, user }: { panel: PanelId; user: User | null }): J
     case 'chat':          return <ChatPanel />
     case 'feedback':      return <FeedbackPanel />
     case 'profile':       return <ProfilePanel user={user} />
-    case 'announcements': return <AnnouncementsPanel />
+    case 'announcements': return <AnnouncementsPanel user={user} />
     case 'resources':     return <ResourcesPanel />
     case 'findPeers':     return <FindPeersPanel />
     case 'leaderboards':  return <LeaderboardsPanel />

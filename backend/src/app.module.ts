@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AnnouncementsModule } from './announcements/announcements.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AchievementsModule } from './achievements/achievements.module';
@@ -18,6 +19,7 @@ import { FortyTwoModule } from './integrations/fortytwo/fortytwo.module';
       isGlobal: true,
     }),
 
+    AnnouncementsModule,
     AuthModule,
     UsersModule,
     AchievementsModule,

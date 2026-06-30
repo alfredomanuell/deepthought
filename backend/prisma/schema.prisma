@@ -35,6 +35,7 @@ model User {
   refreshTokenHash    String?
   chatRooms           ChatRoomParticipant[]
   feedbacks           Feedback[]
+  announcements       Announcement[]
   friendshipsReceived Friendship[]          @relation("FriendshipAddressee")
   friendshipsSent     Friendship[]          @relation("FriendshipRequester")
   chatMessages        Message[]
@@ -143,6 +144,18 @@ model Feedback {
   message   String
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  pinned    Boolean  @default(false)
+  authorId  String
+  createdAt DateTime @default(now())
+  author    User     @relation(fields: [authorId], references: [id])
 
   @@index([createdAt])
 }

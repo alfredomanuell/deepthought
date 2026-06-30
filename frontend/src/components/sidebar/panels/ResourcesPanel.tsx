@@ -210,7 +210,7 @@ export default function ResourcesPanel() {
           <div key={r.id} className="px-4 py-3 border-b-2 border-black/40 flex flex-col gap-1">
             <div className="flex items-start justify-between gap-2">
               <a
-                href={r.url}
+                href={/^https?:\/\//i.test(r.url) ? r.url : `https://${r.url}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-pressStart text-[10px] text-contrast hover:text-secundary leading-relaxed flex-1"
