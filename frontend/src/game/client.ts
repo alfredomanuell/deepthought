@@ -5,10 +5,23 @@ import { setupInput } from "./setupInput";
 import { setupMap } from "./setupMap";
 import { cartToIso } from "./isometricUtils";
 import { toLocal, isValidTile } from "./mapCoords";
-import { Player } from "./player";
+import { Player, type Direction } from "./player";
+import { RemotePlayerSync } from "./remotePlayerSync";
 import type { CharacterLayers } from "../api/character";
 
 export type { CharacterLayers };
+
+/** Infers a facing direction from a movement delta in local room coords. */
+function directionFromDelta(dx: number, dy: number): Direction {
+	if (dx >= 0 && dy < 0) return 'NE';
+	if (dx < 0 && dy < 0) return 'NW';
+	if (dx < 0 && dy >= 0) return 'SW';
+	return 'SE';
+}
+
+// Module-level so GameScene can read it without constructor gymnastics
+let _localUserId = '';
+let _localDisplayName: string | undefined;
 
 const LAYER_ORDER: (keyof CharacterLayers)[] = ['skin', 'eyes', 'hair', 'clothes', 'accessory'];
 const FRAME_WIDTH  = 64;
@@ -33,6 +46,7 @@ class GameScene extends Phaser.Scene {
 	private floorsLayer?: Phaser.Tilemaps.TilemapLayer | Phaser.Tilemaps.TilemapGPULayer | null;
 	private highlight?: Phaser.GameObjects.Image;
 	private player?: Player;
+	private remoteSync?: RemotePlayerSync;
 
 	preload() {
 		this.load.image("floor",       "assets/tilesets/floors.png");
@@ -73,7 +87,13 @@ class GameScene extends Phaser.Scene {
 		this.highlight.setVisible(false);
 
 		// ── Spawn player at local (0, 0) — the entrance tile ─────────────────
-		this.player = new Player(this, this.offsetX, this.offsetY, 0, 0);
+		this.player = new Player(this, this.offsetX, this.offsetY, 0, 0, _localDisplayName);
+
+		// ── Multiplayer: spawn/despawn/move remote players via the world gateway ──
+		if (_localUserId) {
+			this.remoteSync = new RemotePlayerSync(this, this.offsetX, this.offsetY, _localUserId);
+			this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.remoteSync?.destroy());
+		}
 
 		// ── Click to move ─────────────────────────────────────────────────────
 		this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
@@ -86,8 +106,10 @@ class GameScene extends Phaser.Scene {
 
 			if (tile) {
 				const { lx, ly } = toLocal(tile.x, tile.y);
-				if (isValidTile(lx, ly)) {
-					this.player?.setLocalTile(lx, ly);
+				if (isValidTile(lx, ly) && this.player) {
+					const direction = directionFromDelta(lx - this.player.lx, ly - this.player.ly);
+					this.player.setLocalTile(lx, ly, direction);
+					this.remoteSync?.emitMove(lx, ly, direction);
 				}
 			}
 		});
@@ -116,8 +138,15 @@ class GameScene extends Phaser.Scene {
 	}
 }
 
-export function startGame(parent: string | HTMLElement, characterLayers?: CharacterLayers): Phaser.Game {
+export function startGame(
+	parent: string | HTMLElement,
+	characterLayers?: CharacterLayers,
+	localUserId?: string,
+	localDisplayName?: string,
+): Phaser.Game {
 	if (characterLayers) _characterLayers = characterLayers;
+	if (localUserId) _localUserId = localUserId;
+	_localDisplayName = localDisplayName;
 
 	return new Phaser.Game({
 		type: Phaser.AUTO,

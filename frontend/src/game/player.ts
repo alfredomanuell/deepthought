@@ -34,8 +34,10 @@ export type Direction = 'NW' | 'NE' | 'SW' | 'SE';
 const DIRECTION_FRAME: Record<Direction, number> = { NW: 0, NE: 1, SW: 2, SE: 3 };
 
 export class Player {
+	private scene: Phaser.Scene;
 	private container: Phaser.GameObjects.Container;
 	private sprites: Phaser.GameObjects.Sprite[] = [];
+	private nameplate?: Phaser.GameObjects.Text;
 	private offsetX: number;
 	private offsetY: number;
 	private direction: Direction = 'SE';
@@ -49,7 +51,9 @@ export class Player {
 		offsetY: number,
 		startLX: number,
 		startLY: number,
+		displayName?: string,
 	) {
+		this.scene = scene;
 		this.offsetX = offsetX;
 		this.offsetY = offsetY;
 		this.lx      = startLX;
@@ -64,6 +68,15 @@ export class Player {
 			sprite.setOrigin(0.5, 1); // anchor at feet
 			this.sprites.push(sprite);
 			this.container.add(sprite);
+		}
+
+		if (displayName) {
+			this.nameplate = scene.add.text(0, -TILE_HEIGHT * 2, displayName, {
+				fontSize: '12px',
+				color: '#ffffff',
+				align: 'center',
+			}).setOrigin(0.5, 1);
+			this.container.add(this.nameplate);
 		}
 
 		this.setLocalTile(startLX, startLY);
@@ -100,5 +113,40 @@ export class Player {
 		for (const sprite of this.sprites) {
 			sprite.setFrame(frame);
 		}
+	}
+
+	/**
+	 * Move a remote player to a new tile smoothly instead of teleporting.
+	 * Used for players driven by `player:move` broadcasts, not the local player.
+	 */
+	moveToTile(lx: number, ly: number, direction: Direction): void {
+		this.direction = direction;
+		this.lx = lx;
+		this.ly = ly;
+
+		const { wx, wy } = toWorld(lx, ly);
+		const iso = cartToIso(wx, wy);
+
+		const x = iso.x + this.offsetX + TILE_HEIGHT / 2;
+		const y = iso.y + this.offsetY + TILE_HEIGHT;
+
+		this.scene.tweens.add({
+			targets: this.container,
+			x,
+			y,
+			duration: 200,
+			ease: 'Linear',
+		});
+		this.container.setDepth(3 + (wx + wy) * 0.01);
+
+		const frame = DIRECTION_FRAME[this.direction];
+		for (const sprite of this.sprites) {
+			sprite.setFrame(frame);
+		}
+	}
+
+	/** Removes this player's container and all its sprites from the scene. */
+	destroy(): void {
+		this.container.destroy();
 	}
 }

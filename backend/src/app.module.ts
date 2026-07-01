@@ -12,10 +12,12 @@ import { AdminModule } from './admin/admin.module';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { FortyTwoModule } from './integrations/fortytwo/fortytwo.module';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ //permite acessar variáveis do .env em qualquer lugar do backend
+    ConfigModule.forRoot({
+      //permite acessar variáveis do .env em qualquer lugar do backend
       isGlobal: true,
     }),
 
@@ -30,6 +32,7 @@ import { FortyTwoModule } from './integrations/fortytwo/fortytwo.module';
     AdminModule,
     PrismaModule,
     FortyTwoModule,
+    GatewayModule,
   ],
 })
 export class AppModule {}
