@@ -132,6 +132,46 @@ export class NotificationsService {
   }
 
   /**
+   * Notifica um convite para projecto recebido.
+   * @param userId ID do convidado
+   * @param inviterLogin Login de quem convidou
+   * @param projectName Nome do projecto
+   */
+  async notifyProjectInvite(
+    userId: string,
+    inviterLogin: string,
+    projectName: string,
+  ) {
+    return this.create(
+      userId,
+      NotificationType.PROJECT_INVITE,
+      `${inviterLogin} convidou-te para o ${projectName}`,
+    );
+  }
+
+  /**
+   * Notifica o autor do convite sobre a resposta do convidado.
+   * @param userId ID de quem convidou
+   * @param inviteeLogin Login do convidado
+   * @param projectName Nome do projecto
+   * @param accepted true se o convite foi aceite
+   */
+  async notifyProjectInviteResponse(
+    userId: string,
+    inviteeLogin: string,
+    projectName: string,
+    accepted: boolean,
+  ) {
+    return this.create(
+      userId,
+      NotificationType.PROJECT_UPDATE,
+      accepted
+        ? `${inviteeLogin} aceitou o convite para o ${projectName}`
+        : `${inviteeLogin} recusou o convite para o ${projectName}`,
+    );
+  }
+
+  /**
    * Notifica um pedido de amizade recebido.
    * @param userId ID do utilizador destinatário
    * @param requesterLogin Login de quem enviou o pedido

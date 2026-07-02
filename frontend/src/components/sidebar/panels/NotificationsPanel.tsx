@@ -15,6 +15,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   PROJECT_UPDATE: '📌',
   ACHIEVEMENT_UNLOCKED: '🏆',
   NEW_MESSAGE: '✉️',
+  PROJECT_INVITE: '📨',
   SYSTEM: 'ℹ️',
 }
 

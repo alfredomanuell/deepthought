@@ -44,17 +44,36 @@ model User {
   resources           Resource[]
   achievements        UserAchievement[]
   projects            UserProject[]
+  invitationsSent     ProjectInvitation[]  @relation("InvitationsSent")
+  invitationsReceived ProjectInvitation[]  @relation("InvitationsReceived")
 }
 
 model Project {
-  id          String        @id @default(cuid())
-  name        String        @unique
-  slug        String        @unique
+  id          String              @id @default(cuid())
+  name        String              @unique
+  slug        String              @unique
   description String?
-  createdAt   DateTime      @default(now())
+  createdAt   DateTime            @default(now())
   chatRooms   ChatRoom[]
   resources   Resource[]
   users       UserProject[]
+  invitations ProjectInvitation[]
+}
+
+model ProjectInvitation {
+  id        String                  @id @default(cuid())
+  projectId String
+  inviterId String
+  inviteeId String
+  status    ProjectInvitationStatus @default(PENDING)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  project   Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inviter   User                    @relation("InvitationsSent", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee   User                    @relation("InvitationsReceived", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@unique([inviterId, inviteeId, projectId])
+  @@index([inviteeId, status])
 }
 
 model UserProject {
@@ -266,7 +285,14 @@ enum NotificationType {
   PROJECT_UPDATE
   ACHIEVEMENT_UNLOCKED
   NEW_MESSAGE
+  PROJECT_INVITE
   SYSTEM
+}
+
+enum ProjectInvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 enum ChatRoomType {

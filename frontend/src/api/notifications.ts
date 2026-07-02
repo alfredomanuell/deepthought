@@ -8,6 +8,7 @@ export type NotificationType =
   | 'PROJECT_UPDATE'
   | 'ACHIEVEMENT_UNLOCKED'
   | 'NEW_MESSAGE'
+  | 'PROJECT_INVITE'
   | 'SYSTEM'
 
 export interface Notification {
