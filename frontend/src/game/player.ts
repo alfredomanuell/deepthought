@@ -111,12 +111,27 @@ export class Player {
 		}
 
 		if (displayName) {
+			// Só aparece em hover sobre o avatar (ver setInteractive abaixo).
 			this.nameplate = scene.add.text(0, -TILE_HEIGHT * 2, displayName, {
 				fontSize: '12px',
 				color: '#ffffff',
 				align: 'center',
-			}).setOrigin(0.5, 1);
+			}).setOrigin(0.5, 1).setVisible(false);
 			this.container.add(this.nameplate);
+
+			// Hit area cobre o corpo do avatar; os sprites estão ancorados nos
+			// pés (origin 0.5, 1), logo o rectângulo vai de -altura até 0.
+			this.container.setInteractive(
+				new Phaser.Geom.Rectangle(
+					-CHARACTER_FRAME_WIDTH / 2,
+					-CHARACTER_FRAME_HEIGHT,
+					CHARACTER_FRAME_WIDTH,
+					CHARACTER_FRAME_HEIGHT,
+				),
+				Phaser.Geom.Rectangle.Contains,
+			);
+			this.container.on('pointerover', () => this.nameplate?.setVisible(true));
+			this.container.on('pointerout', () => this.nameplate?.setVisible(false));
 		}
 
 		this.setLocalTile(startLX, startLY);
