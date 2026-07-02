@@ -33,7 +33,7 @@ interface PanelContentProps {
 
 function PanelContent({ panel, user, onUnreadChange }: PanelContentProps): ReactElement {
   switch (panel) {
-    case 'chat':          return <ChatPanel />
+    case 'chat':          return <ChatPanel currentUserId={user?.id ?? null} />
     case 'feedback':      return <FeedbackPanel />
     case 'profile':       return <ProfilePanel user={user} />
     case 'announcements': return <AnnouncementsPanel user={user} />
@@ -41,7 +41,7 @@ function PanelContent({ panel, user, onUnreadChange }: PanelContentProps): React
     case 'findPeers':     return <FindPeersPanel />
     case 'leaderboards':  return <LeaderboardsPanel />
     case 'notifications': return <NotificationsPanel onUnreadChange={onUnreadChange} />
-    default:              return <ChatPanel />
+    default:              return <ChatPanel currentUserId={user?.id ?? null} />
   }
 }
 

@@ -119,6 +119,19 @@ export class NotificationsService {
   }
 
   /**
+   * Notifica uma nova mensagem privada recebida (destinatário offline).
+   * @param userId ID do destinatário
+   * @param senderLogin Login de quem enviou a mensagem
+   */
+  async notifyNewMessage(userId: string, senderLogin: string) {
+    return this.create(
+      userId,
+      NotificationType.NEW_MESSAGE,
+      `Nova mensagem de ${senderLogin}`,
+    );
+  }
+
+  /**
    * Notifica um pedido de amizade recebido.
    * @param userId ID do utilizador destinatário
    * @param requesterLogin Login de quem enviou o pedido

@@ -39,4 +39,14 @@ export class RealtimeService {
 
     this.server.to(userRoom(userId)).emit(event, payload);
   }
+
+  /**
+   * True se o utilizador tem pelo menos uma sessão socket ligada.
+   * Usado p.ex. para só criar notificação de nova mensagem quando o
+   * destinatário está offline.
+   */
+  isUserConnected(userId: string): boolean {
+    const room = this.server?.sockets.adapter.rooms.get(userRoom(userId));
+    return (room?.size ?? 0) > 0;
+  }
 }

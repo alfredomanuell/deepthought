@@ -204,10 +204,12 @@ model ChatRoom {
 }
 
 model ChatRoomParticipant {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   userId     String
   chatRoomId String
-  joinedAt   DateTime @default(now())
+  joinedAt   DateTime  @default(now())
+  /// Última leitura da sala — base dos read receipts e contagem de não lidas
+  lastReadAt DateTime?
   chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -263,6 +265,7 @@ enum NotificationType {
   HELP_REQUEST
   PROJECT_UPDATE
   ACHIEVEMENT_UNLOCKED
+  NEW_MESSAGE
   SYSTEM
 }
 

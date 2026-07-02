@@ -14,6 +14,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { FortyTwoModule } from './integrations/fortytwo/fortytwo.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { FriendshipsModule } from './friendships/friendships.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { FriendshipsModule } from './friendships/friendships.module';
     FortyTwoModule,
     GatewayModule,
     FriendshipsModule,
+    ChatModule,
   ],
 })
 export class AppModule {}
