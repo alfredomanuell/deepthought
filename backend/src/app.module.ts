@@ -13,6 +13,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { FortyTwoModule } from './integrations/fortytwo/fortytwo.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { FriendshipsModule } from './friendships/friendships.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { GatewayModule } from './gateway/gateway.module';
     PrismaModule,
     FortyTwoModule,
     GatewayModule,
+    FriendshipsModule,
   ],
 })
 export class AppModule {}
