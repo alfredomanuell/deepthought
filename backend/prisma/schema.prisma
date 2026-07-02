@@ -144,16 +144,18 @@ model UserAchievement {
 }
 
 model Resource {
-  id          String       @id @default(cuid())
-  title       String
-  description String?
-  url         String
-  type        ResourceType
-  userId      String
-  projectId   String
-  createdAt   DateTime     @default(now())
-  project     Project      @relation(fields: [projectId], references: [id])
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  title        String
+  description  String?
+  url          String
+  type         ResourceType
+  originalName String?
+  fileSize     Int?
+  userId       String
+  projectId    String
+  createdAt    DateTime     @default(now())
+  project      Project      @relation(fields: [projectId], references: [id])
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
@@ -286,6 +288,7 @@ enum ResourceType {
   ARTICLE
   GITHUB
   OTHER
+  FILE
 }
 
 enum FriendshipStatus {

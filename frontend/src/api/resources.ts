@@ -1,7 +1,7 @@
 import { apiFetch } from './apiClient'
 import { API_BASE_URL } from '../config/api'
 
-export type ResourceType = 'LINK' | 'PDF' | 'VIDEO' | 'ARTICLE' | 'GITHUB' | 'OTHER'
+export type ResourceType = 'LINK' | 'PDF' | 'VIDEO' | 'ARTICLE' | 'GITHUB' | 'OTHER' | 'FILE'
 
 export interface Resource {
   id: string
@@ -9,6 +9,8 @@ export interface Resource {
   description: string | null
   url: string
   type: ResourceType
+  originalName: string | null
+  fileSize: number | null
   createdAt: string
   user: { id: string; login: string; displayName: string }
   project: { id: string; name: string; slug: string }
@@ -38,6 +40,18 @@ export async function createResource(payload: CreateResourcePayload): Promise<Re
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
     throw new Error((err as any).message ?? 'Failed to create resource')
+  }
+  return response.json()
+}
+
+export async function uploadResource(formData: FormData): Promise<Resource> {
+  const response = await apiFetch(`${API_BASE_URL}/resources/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error((err as any).message ?? 'Failed to upload resource')
   }
   return response.json()
 }

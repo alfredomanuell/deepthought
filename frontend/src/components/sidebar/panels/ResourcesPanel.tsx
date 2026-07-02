@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { fetchProjectCatalog, type ProjectCatalogItem } from '../../../api/projects'
 import {
   fetchResources,
   createResource,
+  uploadResource,
   deleteResource,
   type Resource,
   type ResourceType,
 } from '../../../api/resources'
+import { API_BASE_URL } from '../../../config/api'
 
-const RESOURCE_TYPES: ResourceType[] = ['LINK', 'PDF', 'VIDEO', 'ARTICLE', 'GITHUB', 'OTHER']
+const RESOURCE_TYPES: ResourceType[] = ['LINK', 'PDF', 'VIDEO', 'ARTICLE', 'GITHUB', 'OTHER', 'FILE']
 
 const TYPE_LABELS: Record<ResourceType, string> = {
   LINK: 'Link',
@@ -17,6 +19,7 @@ const TYPE_LABELS: Record<ResourceType, string> = {
   ARTICLE: 'Article',
   GITHUB: 'GitHub',
   OTHER: 'Other',
+  FILE: 'File',
 }
 
 interface CreateForm {
@@ -28,6 +31,12 @@ interface CreateForm {
 
 const EMPTY_FORM: CreateForm = { title: '', url: '', description: '', type: 'LINK' }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export default function ResourcesPanel() {
   const [projects, setProjects] = useState<ProjectCatalogItem[]>([])
   const [selectedId, setSelectedId] = useState('')
@@ -36,9 +45,11 @@ export default function ResourcesPanel() {
   const [loadingResources, setLoadingResources] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<CreateForm>(EMPTY_FORM)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -70,8 +81,39 @@ export default function ResourcesPanel() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.title.trim() || !form.url.trim()) {
-      setFormError('Title and URL are required')
+    if (!form.title.trim()) {
+      setFormError('Title is required')
+      return
+    }
+
+    if (form.type === 'FILE') {
+      if (!selectedFile) {
+        setFormError('Please select a file')
+        return
+      }
+      setSubmitting(true)
+      setFormError('')
+      try {
+        const fd = new FormData()
+        fd.append('file', selectedFile)
+        fd.append('title', form.title.trim())
+        fd.append('projectId', selectedId)
+        if (form.description.trim()) fd.append('description', form.description.trim())
+        const created = await uploadResource(fd)
+        setResources(prev => [created, ...prev])
+        setForm(EMPTY_FORM)
+        setSelectedFile(null)
+        setShowForm(false)
+      } catch (err: any) {
+        setFormError(err.message ?? 'Failed to upload file')
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+
+    if (!form.url.trim()) {
+      setFormError('URL is required')
       return
     }
     setSubmitting(true)
@@ -101,6 +143,8 @@ export default function ResourcesPanel() {
     } catch {}
   }
 
+  const isFileType = form.type === 'FILE'
+
   if (loadingProjects) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -129,7 +173,7 @@ export default function ResourcesPanel() {
       <div className="px-4 py-3 border-b-4 border-black shrink-0 flex items-center justify-between">
         <span className="font-pressStart text-xs text-contrast">Resources</span>
         <button
-          onClick={() => { setShowForm(v => !v); setFormError('') }}
+          onClick={() => { setShowForm(v => !v); setFormError(''); setSelectedFile(null) }}
           className="font-pressStart text-[10px] text-secundary border border-secundary px-2 py-0.5"
         >
           {showForm ? '✕' : '+ Add'}
@@ -157,13 +201,35 @@ export default function ResourcesPanel() {
             maxLength={100}
             className="px-2 py-1 bg-white font-pressStart text-[10px] focus:outline-none border-b-2 border-r-2 border-l border-t border-black w-full placeholder:text-black/40"
           />
-          <input
-            placeholder="URL *"
-            value={form.url}
-            onChange={e => { setForm(f => ({ ...f, url: e.target.value })); setFormError('') }}
-            maxLength={500}
-            className="px-2 py-1 bg-white font-pressStart text-[10px] focus:outline-none border-b-2 border-r-2 border-l border-t border-black w-full placeholder:text-black/40"
-          />
+          {isFileType ? (
+            <div className="flex flex-col gap-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={e => {
+                  setSelectedFile(e.target.files?.[0] ?? null)
+                  setFormError('')
+                  if (e.target.files?.[0] && !form.title.trim()) {
+                    setForm(f => ({ ...f, title: e.target.files![0].name.replace(/\.[^/.]+$/, '') }))
+                  }
+                }}
+                className="text-[10px] font-pressStart text-white file:mr-2 file:px-2 file:py-1 file:border file:border-white/30 file:bg-black/40 file:text-white file:text-[10px] file:font-pressStart file:cursor-pointer"
+              />
+              {selectedFile && (
+                <p className="font-pressStart text-[8px] text-white/50">
+                  {selectedFile.name} ({formatFileSize(selectedFile.size)})
+                </p>
+              )}
+            </div>
+          ) : (
+            <input
+              placeholder="URL *"
+              value={form.url}
+              onChange={e => { setForm(f => ({ ...f, url: e.target.value })); setFormError('') }}
+              maxLength={500}
+              className="px-2 py-1 bg-white font-pressStart text-[10px] focus:outline-none border-b-2 border-r-2 border-l border-t border-black w-full placeholder:text-black/40"
+            />
+          )}
           <input
             placeholder="Description (optional)"
             value={form.description}
@@ -173,7 +239,7 @@ export default function ResourcesPanel() {
           />
           <select
             value={form.type}
-            onChange={e => setForm(f => ({ ...f, type: e.target.value as ResourceType }))}
+            onChange={e => { setForm(f => ({ ...f, type: e.target.value as ResourceType })); setFormError('') }}
             className="px-2 py-1 bg-white font-pressStart text-[10px] focus:outline-none border-b-2 border-r-2 border-l border-t border-black w-full"
           >
             {RESOURCE_TYPES.map(t => (
@@ -209,14 +275,24 @@ export default function ResourcesPanel() {
         {!loadingResources && resources.map(r => (
           <div key={r.id} className="px-4 py-3 border-b-2 border-black/40 flex flex-col gap-1">
             <div className="flex items-start justify-between gap-2">
-              <a
-                href={/^https?:\/\//i.test(r.url) ? r.url : `https://${r.url}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-pressStart text-[10px] text-contrast hover:text-secundary leading-relaxed flex-1"
-              >
-                {r.title}
-              </a>
+              {r.type === 'FILE' ? (
+                <a
+                  href={`${API_BASE_URL}/uploads/${r.url}`}
+                  download={r.originalName ?? undefined}
+                  className="font-pressStart text-[10px] text-contrast hover:text-secundary leading-relaxed flex-1"
+                >
+                  {r.title}
+                </a>
+              ) : (
+                <a
+                  href={/^https?:\/\//i.test(r.url) ? r.url : `https://${r.url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-pressStart text-[10px] text-contrast hover:text-secundary leading-relaxed flex-1"
+                >
+                  {r.title}
+                </a>
+              )}
               {currentUserId && r.user.id === currentUserId && (
                 <button
                   onClick={() => handleDelete(r.id)}
@@ -229,8 +305,14 @@ export default function ResourcesPanel() {
             {r.description && (
               <p className="font-pressStart text-[9px] text-white/60 leading-relaxed">{r.description}</p>
             )}
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <span className="font-pressStart text-[8px] text-secundary border border-secundary/50 px-1">{TYPE_LABELS[r.type]}</span>
+              {r.type === 'FILE' && r.fileSize && (
+                <span className="font-pressStart text-[8px] text-white/30">{formatFileSize(r.fileSize)}</span>
+              )}
+              {r.type === 'FILE' && r.originalName && (
+                <span className="font-pressStart text-[8px] text-white/30 truncate max-w-[120px]">{r.originalName}</span>
+              )}
               <span className="font-pressStart text-[8px] text-white/40">by {r.user.login}</span>
             </div>
           </div>

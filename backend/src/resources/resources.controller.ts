@@ -12,9 +12,13 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ResourcesService } from './resources.service';
-import { CreateResourceDto, ResourcesQueryDto } from './dto/resources.dto';
+import { FileUploadService, FILE_UPLOAD_CONFIG } from './file-upload.service';
+import { CreateResourceDto, UploadResourceDto, ResourcesQueryDto } from './dto/resources.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 /**
@@ -30,8 +34,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 export class ResourcesController {
   constructor(
-    /** Serviço de recursos */
     private readonly resourcesService: ResourcesService,
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
   /**
@@ -55,6 +59,22 @@ export class ResourcesController {
   @HttpCode(HttpStatus.CREATED)
   create(@Req() req: any, @Body(new ValidationPipe()) dto: CreateResourceDto) {
     return this.resourcesService.create(req.user.sub, dto);
+  }
+
+  /**
+   * POST /resources/upload
+   * Faz upload de um ficheiro como recurso partilhado.
+   * Recebe multipart/form-data com file, title, description?, projectId.
+   */
+  @Post('resources/upload')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file', FILE_UPLOAD_CONFIG))
+  upload(
+    @Req() req: any,
+    @UploadedFile() file: Express.Multer.File,
+    @Body(new ValidationPipe({ transform: true })) dto: UploadResourceDto,
+  ) {
+    return this.resourcesService.createFromFile(req.user.sub, dto, file);
   }
 
   /**
