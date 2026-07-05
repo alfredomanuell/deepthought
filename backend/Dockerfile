@@ -1,5 +1,5 @@
 #Dev Mode
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
@@ -32,7 +32,7 @@ CMD ["npm", "run", "start:dev"]
 #COPY prisma ./prisma
 
 # Gera o Prisma Client usado pelo TypeScript durante o build.
-#RUN npx prisma generate
+#RUN npx prisma ge0nerate
 
 # Copia o restante código depois das dependências para maximizar cache.
 #COPY . .
