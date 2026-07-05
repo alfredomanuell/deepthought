@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Role } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { JwtUser } from '../interfaces/jwt-user.interface';
+import { getJwtSecret } from '../jwt-secret.util';
 
 /**
  * Interface que representa o payload do token JWT gerado pelo AuthService.
@@ -38,24 +39,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       // Rejeita tokens expirados automaticamente
       ignoreExpiration: false,
       // Secret usado para assinar e verificar o token
-      secretOrKey: JwtStrategy.getJwtSecret(config),
+      secretOrKey: getJwtSecret(config),
     });
-  }
-
-  /**
-   * Lê e valida o secret JWT durante o arranque da aplicação.
-   *
-   * Sem este valor, a aplicação não deve arrancar, porque não conseguiria
-   * verificar a assinatura dos tokens com segurança.
-   */
-  private static getJwtSecret(config: ConfigService): string {
-    const secret = config.get<string>('JWT_SECRET');
-
-    if (!secret) {
-      throw new Error('JWT_SECRET environment variable is required');
-    }
-
-    return secret;
   }
 
   /**

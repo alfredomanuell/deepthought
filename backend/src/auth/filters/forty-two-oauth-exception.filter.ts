@@ -2,6 +2,7 @@ import {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -25,12 +26,16 @@ export class FortyTwoOAuthExceptionFilter implements ExceptionFilter {
     const message =
       exception instanceof Error ? exception.message : String(exception);
 
+    if (exception instanceof ForbiddenException && exception.message === 'not_eligible') {
+      return response.redirect(`${frontendUrl}/?oauthError=not_eligible`);
+    }
+
     /**
      * O detalhe técnico fica no log; o browser recebe só um código estável.
      * Isto cobre ETIMEDOUT/ENETUNREACH sem revelar stack trace ao utilizador.
      */
     this.logger.error(`42 OAuth failed: ${message}`);
 
-    return response.redirect(`${frontendUrl}/login?oauthError=42_unavailable`);
+    return response.redirect(`${frontendUrl}/?oauthError=42_unavailable`);
   }
 }

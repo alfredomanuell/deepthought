@@ -8,7 +8,19 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AchievementsService } from '../achievements/achievements.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { Prisma, ProjectStatus } from '@prisma/client';
+import { FriendshipsService } from '../friendships/friendships.service';
+import { NotificationType, Prisma, ProjectStatus } from '@prisma/client';
+
+/** Campos públicos de utilizadores em listagens do board/peers. */
+const PUBLIC_USER_SELECT = {
+  id: true,
+  login: true,
+  displayName: true,
+  avatar: true,
+  campus: true,
+  coalition: true,
+  level: true,
+} satisfies Prisma.UserSelect;
 import {
   UpdateProjectStatusDto,
   CreateHelpRequestDto,
@@ -31,13 +43,26 @@ export class ProjectsService {
     private readonly achievementsService: AchievementsService,
     /** Para criar notificações de ajuda */
     private readonly notificationsService: NotificationsService,
+    /** Amizade automática ao aceitar uma oferta de ajuda */
+    private readonly friendships: FriendshipsService,
   ) {}
+
+  /**
+   * Retorna o catálogo de todos os projectos disponíveis na plataforma.
+   * GET /projects/catalog
+   */
+  async findCatalog() {
+    return this.prisma.project.findMany({
+      select: { id: true, name: true, slug: true },
+      orderBy: { name: 'asc' },
+    });
+  }
 
   /**
    * Lista projectos de todos os utilizadores com filtros e paginação.
    * GET /projects
    */
-  async findAll(query: ProjectsQueryDto) {
+  async findAll(query: ProjectsQueryDto, currentUserId?: string) {
     const { status, needHelp, campus, page = 1, limit = 20 } = query;
     const skip = (page - 1) * limit;
 
@@ -65,6 +90,11 @@ export class ProjectsService {
     // Filtro por flag needHelp
     if (needHelp !== undefined) {
       where.needHelp = needHelp;
+    }
+
+    // Apenas os projectos do próprio utilizador (formulário "pedir ajuda")
+    if (query.mine && currentUserId) {
+      where.userId = currentUserId;
     }
 
     const [projects, total] = await this.prisma.$transaction([
@@ -390,6 +420,130 @@ export class ProjectsService {
     return {
       data: requests,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * Lista as ofertas de ajuda recebidas num projecto próprio.
+   * GET /projects/:id/offers  (:id = UserProject.id, apenas o dono)
+   */
+  async listOffers(userProjectId: string, userId: string) {
+    const userProject = await this.prisma.userProject.findFirst({
+      where: { id: userProjectId, userId },
+      select: { id: true },
+    });
+
+    if (!userProject) {
+      throw new NotFoundException('Project not found or you are not the owner');
+    }
+
+    return this.prisma.projectHelpOffer.findMany({
+      where: { userProjectId },
+      include: { helper: { select: PUBLIC_USER_SELECT } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Aceita uma oferta de ajuda no próprio projecto:
+   * cria amizade automática com o helper, fecha o pedido (needHelp off +
+   * help requests resolvidos) e notifica o helper. A UI abre depois a DM.
+   * POST /projects/offers/:offerId/accept
+   */
+  async acceptOffer(offerId: string, user: { sub: string; login: string }) {
+    const offer = await this.prisma.projectHelpOffer.findUnique({
+      where: { id: offerId },
+      include: {
+        helper: { select: PUBLIC_USER_SELECT },
+        userProject: {
+          include: { project: { select: { name: true } } },
+        },
+      },
+    });
+
+    /** 404 também quando a oferta não é num projecto do próprio. */
+    if (!offer || offer.userProject.userId !== user.sub) {
+      throw new NotFoundException('Offer not found');
+    }
+
+    /** Amizade automática (falha se houver bloqueio entre os dois). */
+    await this.friendships.ensureFriends(user.sub, offer.helperId);
+
+    /** Fecha o pedido de ajuda deste projecto. */
+    await this.prisma.$transaction([
+      this.prisma.userProject.update({
+        where: { id: offer.userProjectId },
+        data: { needHelp: false },
+      }),
+      this.prisma.projectHelpRequest.updateMany({
+        where: { userProjectId: offer.userProjectId, isResolved: false },
+        data: { isResolved: true },
+      }),
+    ]);
+
+    await this.notificationsService.create(
+      offer.helperId,
+      NotificationType.PROJECT_UPDATE,
+      `${user.login} aceitou a tua oferta de ajuda no ${offer.userProject.project.name}`,
+    );
+
+    this.logger.log(`Offer ${offerId} accepted by ${user.sub}`);
+
+    /** O frontend usa o helper devolvido para abrir a DM. */
+    return { helper: offer.helper };
+  }
+
+  /**
+   * Encontra colegas para um projecto do catálogo: quem está a fazê-lo,
+   * quem já terminou (pode ajudar) e quem ainda não começou (elegível).
+   * GET /projects/:id/peers  (:id = Project.id)
+   */
+  async findPeers(projectId: string, currentUserId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, name: true, slug: true },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    const baseWhere = {
+      projectId,
+      userId: { not: currentUserId },
+      user: { isBanned: false },
+    };
+
+    const select = {
+      user: { select: PUBLIC_USER_SELECT },
+    } satisfies Prisma.UserProjectSelect;
+
+    const [doing, finished, eligible] = await this.prisma.$transaction([
+      this.prisma.userProject.findMany({
+        where: { ...baseWhere, status: ProjectStatus.IN_PROGRESS },
+        select,
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+      }),
+      this.prisma.userProject.findMany({
+        where: { ...baseWhere, status: ProjectStatus.FINISHED },
+        select,
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+      }),
+      this.prisma.userProject.findMany({
+        where: { ...baseWhere, status: ProjectStatus.NOT_STARTED },
+        select,
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+      }),
+    ]);
+
+    return {
+      project,
+      doing: doing.map((r) => r.user),
+      finished: finished.map((r) => r.user),
+      eligible: eligible.map((r) => r.user),
     };
   }
 }

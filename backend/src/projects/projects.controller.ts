@@ -11,6 +11,7 @@ import {
   ValidationPipe,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import {
@@ -48,8 +49,19 @@ export class ProjectsController {
   @Get()
   findAll(
     @Query(new ValidationPipe({ transform: true })) query: ProjectsQueryDto,
+    @Req() req: any,
   ) {
-    return this.projectsService.findAll(query);
+    return this.projectsService.findAll(query, req.user.sub);
+  }
+
+  /**
+   * GET /projects/catalog
+   * Retorna todos os projectos disponíveis na plataforma (id, name, slug).
+   * NOTA: deve vir antes de GET /projects/:id para evitar conflito de rota.
+   */
+  @Get('catalog')
+  findCatalog() {
+    return this.projectsService.findCatalog();
   }
 
   /**
@@ -59,10 +71,41 @@ export class ProjectsController {
    */
   @Get('help/open')
   findOpenHelpRequests(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
   ) {
     return this.projectsService.findOpenHelpRequests(page, limit);
+  }
+
+  /**
+   * GET /projects/:id/offers
+   * Ofertas de ajuda recebidas num projecto próprio (:id = UserProject.id).
+   */
+  @Get(':id/offers')
+  listOffers(@Param('id') id: string, @Req() req: any) {
+    return this.projectsService.listOffers(id, req.user.sub);
+  }
+
+  /**
+   * POST /projects/offers/:offerId/accept
+   * Aceita uma oferta de ajuda: amizade automática + fecha o pedido.
+   */
+  @Post('offers/:offerId/accept')
+  @HttpCode(HttpStatus.OK)
+  acceptOffer(@Param('offerId') offerId: string, @Req() req: any) {
+    return this.projectsService.acceptOffer(offerId, {
+      sub: req.user.sub,
+      login: req.user.login,
+    });
+  }
+
+  /**
+   * GET /projects/:id/peers
+   * Quem está a fazer / terminou / é elegível para um Project do catálogo.
+   */
+  @Get(':id/peers')
+  findPeers(@Param('id') id: string, @Req() req: any) {
+    return this.projectsService.findPeers(id, req.user.sub);
   }
 
   /**

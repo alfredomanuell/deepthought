@@ -27,12 +27,15 @@ model User {
   lastSyncAt          DateTime?
   role                Role                  @default(USER)
   isEmailVerified     Boolean               @default(false)
+  characterCreated    Boolean               @default(false)
+  characterLayers     Json?
   otpCode             String?
   otpExpiresAt        DateTime?
   lastSeenAt          DateTime?
   refreshTokenHash    String?
   chatRooms           ChatRoomParticipant[]
   feedbacks           Feedback[]
+  announcements       Announcement[]
   friendshipsReceived Friendship[]          @relation("FriendshipAddressee")
   friendshipsSent     Friendship[]          @relation("FriendshipRequester")
   chatMessages        Message[]
@@ -41,17 +44,37 @@ model User {
   resources           Resource[]
   achievements        UserAchievement[]
   projects            UserProject[]
+  invitationsSent     ProjectInvitation[]  @relation("InvitationsSent")
+  invitationsReceived ProjectInvitation[]  @relation("InvitationsReceived")
+  announcementReads   AnnouncementRead[]
 }
 
 model Project {
-  id          String        @id @default(cuid())
-  name        String        @unique
-  slug        String        @unique
+  id          String              @id @default(cuid())
+  name        String              @unique
+  slug        String              @unique
   description String?
-  createdAt   DateTime      @default(now())
+  createdAt   DateTime            @default(now())
   chatRooms   ChatRoom[]
   resources   Resource[]
   users       UserProject[]
+  invitations ProjectInvitation[]
+}
+
+model ProjectInvitation {
+  id        String                  @id @default(cuid())
+  projectId String
+  inviterId String
+  inviteeId String
+  status    ProjectInvitationStatus @default(PENDING)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  project   Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inviter   User                    @relation("InvitationsSent", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee   User                    @relation("InvitationsReceived", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@unique([inviterId, inviteeId, projectId])
+  @@index([inviteeId, status])
 }
 
 model UserProject {
@@ -67,7 +90,7 @@ model UserProject {
   helpOffers   ProjectHelpOffer[]
   helpRequests ProjectHelpRequest[]
   project      Project              @relation(fields: [projectId], references: [id])
-  user         User                 @relation(fields: [userId], references: [id])
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, projectId])
   @@index([projectId])
@@ -81,7 +104,7 @@ model ProjectHelpRequest {
   description   String
   isResolved    Boolean     @default(false)
   createdAt     DateTime    @default(now())
-  userProject   UserProject @relation(fields: [userProjectId], references: [id])
+  userProject   UserProject @relation(fields: [userProjectId], references: [id], onDelete: Cascade)
 
   @@index([isResolved])
 }
@@ -92,8 +115,8 @@ model ProjectHelpOffer {
   helperId      String
   message       String?
   createdAt     DateTime    @default(now())
-  helper        User        @relation(fields: [helperId], references: [id])
-  userProject   UserProject @relation(fields: [userProjectId], references: [id])
+  helper        User        @relation(fields: [helperId], references: [id], onDelete: Cascade)
+  userProject   UserProject @relation(fields: [userProjectId], references: [id], onDelete: Cascade)
 
   @@index([helperId])
 }
@@ -115,22 +138,24 @@ model UserAchievement {
   achievementId String
   unlockedAt    DateTime    @default(now())
   achievement   Achievement @relation(fields: [achievementId], references: [id])
-  user          User        @relation(fields: [userId], references: [id])
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
 }
 
 model Resource {
-  id          String       @id @default(cuid())
-  title       String
-  description String?
-  url         String
-  type        ResourceType
-  userId      String
-  projectId   String
-  createdAt   DateTime     @default(now())
-  project     Project      @relation(fields: [projectId], references: [id])
-  user        User         @relation(fields: [userId], references: [id])
+  id           String       @id @default(cuid())
+  title        String
+  description  String?
+  url          String
+  type         ResourceType
+  originalName String?
+  fileSize     Int?
+  userId       String
+  projectId    String
+  createdAt    DateTime     @default(now())
+  project      Project      @relation(fields: [projectId], references: [id])
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
@@ -140,9 +165,34 @@ model Feedback {
   userId    String
   message   String
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
+}
+
+model Announcement {
+  id        String             @id @default(cuid())
+  title     String
+  body      String
+  pinned    Boolean            @default(false)
+  authorId  String
+  createdAt DateTime           @default(now())
+  author    User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reads     AnnouncementRead[]
+
+  @@index([createdAt])
+}
+
+model AnnouncementRead {
+  id             String       @id @default(cuid())
+  userId         String
+  announcementId String
+  readAt         DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, announcementId])
+  @@index([announcementId])
 }
 
 model Friendship {
@@ -166,6 +216,8 @@ model Notification {
   type      NotificationType
   title     String
   message   String?
+  /// Payload opcional para notificações accionáveis (ex.: friendshipId)
+  data      Json?
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -189,10 +241,12 @@ model ChatRoom {
 }
 
 model ChatRoomParticipant {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   userId     String
   chatRoomId String
-  joinedAt   DateTime @default(now())
+  joinedAt   DateTime  @default(now())
+  /// Última leitura da sala — base dos read receipts e contagem de não lidas
+  lastReadAt DateTime?
   chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -234,6 +288,7 @@ enum ResourceType {
   ARTICLE
   GITHUB
   OTHER
+  FILE
 }
 
 enum FriendshipStatus {
@@ -248,7 +303,15 @@ enum NotificationType {
   HELP_REQUEST
   PROJECT_UPDATE
   ACHIEVEMENT_UNLOCKED
+  NEW_MESSAGE
+  PROJECT_INVITE
   SYSTEM
+}
+
+enum ProjectInvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 enum ChatRoomType {

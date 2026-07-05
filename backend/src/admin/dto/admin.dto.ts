@@ -11,7 +11,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { Role } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 /**
  * DTO para criar um utilizador manualmente (admin).
@@ -138,8 +138,11 @@ export class AdminUsersQueryDto {
   @IsString()
   campus?: string;
 
+  /** Transform explícita: `@Type(() => Boolean)` converteria "false" em true. */
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
   @IsBoolean()
   banned?: boolean;
 

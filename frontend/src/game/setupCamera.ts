@@ -19,7 +19,10 @@ const boundsY = offsetY;
 camera.setBounds(boundsX, boundsY, isoW, isoH);
 }
 
-export function clampZoom(scene: Phaser.Scene, deltaY: number): void {
-	const zoom = scene.cameras.main.zoom + deltaY * 0.5;
+export function setZoomClamped(scene: Phaser.Scene, zoom: number): void {
 	scene.cameras.main.zoom = Phaser.Math.Clamp(zoom, 0.5, 10);
+}
+
+export function clampZoom(scene: Phaser.Scene, deltaY: number): void {
+	setZoomClamped(scene, scene.cameras.main.zoom + deltaY * 0.5);
 }

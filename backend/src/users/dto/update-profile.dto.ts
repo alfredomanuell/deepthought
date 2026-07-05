@@ -3,6 +3,7 @@ import {
   IsOptional,
   MaxLength,
   IsUrl,
+  IsObject,
 } from 'class-validator';
 
 /**
@@ -41,4 +42,14 @@ export class UpdateProfileDto {
   @IsString({ message: 'bio must be a string' })
   @MaxLength(300, { message: 'bio must be at most 300 characters' })
   bio?: string;
+
+  @IsOptional()
+  @IsObject({ message: 'characterLayers must be an object' })
+  characterLayers?: {
+    skin?: string;
+    eyes?: string;
+    hair?: string;
+    clothes?: string;
+    accessory?: string;
+  };
 }

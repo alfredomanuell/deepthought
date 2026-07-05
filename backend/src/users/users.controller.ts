@@ -86,7 +86,8 @@ export class UsersController {
    * @param id ID interno (cuid) do utilizador
    */
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findPublicProfile(id);
+  findOne(@Param('id') id: string, @Req() req: any) {
+    // O viewer é necessário para aplicar a privacidade de bloqueios
+    return this.usersService.findPublicProfile(id, req.user.sub);
   }
 }

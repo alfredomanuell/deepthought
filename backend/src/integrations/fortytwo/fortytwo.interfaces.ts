@@ -46,7 +46,7 @@ export interface FortyTwoProjectUser {
   id: number;
   occurrence: number;
   final_mark: number | null;
-  status: string; // 'finished' | 'in_progress' | 'searching_a_group' | 'creating_group' | 'waiting_for_correction' | 'failed'
+  status: string; // 'finished' | 'in_progress' | 'searching_a_group' | 'creating_group' | 'waiting_for_avaluation' | 'failed'
   validated: boolean | null;
   current_team_id: number | null;
   project: {
@@ -116,6 +116,10 @@ export interface MappedFortyTwoProfile {
   level: number;
   evalPoints: number;
   projects: MappedProject[];
+  /** Tipo de conta 42 ("student", "staff", "admin", …). Usado para o acesso gate. */
+  kind: string;
+  /** Lista de cursus do utilizador com slug e data de fim. Usado para o acesso gate. */
+  cursusUsers: Array<{ slug: string; end_at: string | null }>;
 }
 
 /** Projeto mapeado da API 42 */

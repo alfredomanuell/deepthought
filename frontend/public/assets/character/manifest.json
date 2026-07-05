@@ -1,0 +1,12 @@
+{
+  "frameWidth": 64,
+  "frameHeight": 64,
+  "directions": ["NW", "NE", "SW", "SE"],
+  "layers": {
+    "skin": ["light", "medium", "dark", "tan"],
+    "eyes": ["blue", "green", "brown", "black"],
+    "hair": ["black_short", "black_long", "red_short", "blonde_short"],
+    "clothes": ["tshirt_white", "hoodie_blue", "jacket_gray"],
+    "accessory": ["none", "glasses", "hat"]
+  }
+}

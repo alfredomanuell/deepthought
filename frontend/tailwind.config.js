@@ -18,6 +18,10 @@ export default {
 				secundary: "#E8FF00",
 				background: "#111125"
 			},
+			animation: {
+				'slide-out-left':     'slideOutLeft 150ms ease-in forwards',
+				'slide-in-from-left': 'slideInFromLeft 150ms ease-out forwards',
+			},
 		},
 	},
 	plugins: [],

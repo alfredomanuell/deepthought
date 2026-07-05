@@ -54,7 +54,7 @@ export default function OTPEmail() {
 			localStorage.setItem('token', data.accessToken)
 			localStorage.setItem('refreshToken', data.refreshToken)
 
-			navigate('/Game')
+			navigate('/ProfileSetup')
 
 		} catch {
 			setError('Server error')
@@ -62,7 +62,7 @@ export default function OTPEmail() {
 	}
 
 	return (
-		<div className="flex flex-col items-center w-[500px] h-96 bg-neutral_contrast border-b-8 border-r-8 border-l-4 border-t-4 border-black">
+		<div className="flex flex-col items-center w-full max-w-[500px] min-h-96 bg-neutral_contrast border-b-8 border-r-8 border-l-4 border-t-4 border-black">
 
 			<div className='flex flex-col items-center'>
 				<img src={emailIcon} alt="Email icon" className='w-24 h-auto' />

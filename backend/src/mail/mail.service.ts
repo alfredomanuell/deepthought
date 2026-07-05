@@ -18,24 +18,40 @@ export class MailService {
     });
   }
 
+  async sendFeedbackEmail(name: string, email: string, title: string, message: string): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.configService.get<string>('EMAIL_USER'),
+      to: 'mwsilva.contato@gmail.com',
+      replyTo: email,
+      subject: `[Feedback] ${title} — from ${name}`,
+      html: `
+        <h2>${title}</h2>
+        <p><strong>From:</strong> ${name} &lt;${email}&gt;</p>
+        <p><strong>Message:</strong></p>
+        <p>${message.replace(/\n/g, '<br>')}</p>
+      `,
+    });
+    this.logger.log(`Feedback email sent from ${email}`);
+  }
+
   async sendOtpEmail(to: string, code: string): Promise<void> {
     await this.transporter.sendMail({
       from: this.configService.get<string>('EMAIL_USER'),
       to,
       
-      subject: 'Verificação da conta',
+      subject: 'Account Verification - Your OTP Code',
 
       html: `
-        <h2>Bem-vindo à Deepthought</h2>
+        <h2>Welcome to Deepthought</h2>
 
-        <p>O seu código OTP é:</p>
+        <p>Your OTP code is:</p>
 
         <h1>${code}</h1>
 
-        <p>Este código expira em 10 minutos.</p>
+        <p>This code will expire in 10 minutes.</p>
       `,
     });
 
-    this.logger.log(`OTP enviado para ${to}`);
+    this.logger.log(`OTP sent to ${to}`);
   }
 }

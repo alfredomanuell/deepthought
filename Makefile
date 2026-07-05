@@ -4,7 +4,7 @@ export
 COMPOSE=docker compose
 
 # Define a regra padrão para iniciar o ambiente.
-all: up
+all: prisma-dev up
 
 # Constrói as imagens Docker sem cache para garantir que tudo seja atualizado.
 build:

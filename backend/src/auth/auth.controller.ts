@@ -76,7 +76,15 @@ export class AuthController {
       refreshToken: result.refreshToken,
     });
 
-    /** Depois do OAuth -> sync -> JWT, o browser entra directamente no jogo. */
+    /**
+     * Utilizadores que completaram OTP mas não terminaram a criação de personagem
+     * são enviados para /CharacterCreation em vez do jogo.
+     */
+    if (!result.user.characterCreated) {
+      return res.redirect(`${frontendUrl}/CharacterCreation?${params.toString()}`);
+    }
+
+    /** Utilizador completamente integrado: entra directamente no jogo. */
     return res.redirect(`${frontendUrl}/Game?${params.toString()}`);
   }
 

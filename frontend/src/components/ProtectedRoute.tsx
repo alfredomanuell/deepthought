@@ -1,4 +1,4 @@
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { jwtDecode } from 'jwt-decode'
 import { useEffect, useState } from 'react'
 import { refreshToken } from '../api/refresh'
@@ -16,6 +16,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [canAccess, setCanAccess] = useState<boolean | null>(null)
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const tokenFromUrl = searchParams.get('accessToken')
   const refreshTokenFromUrl = searchParams.get('refreshToken')
   const token = tokenFromUrl ?? localStorage.getItem('token')
@@ -31,7 +32,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         localStorage.setItem('refreshToken', refreshTokenFromUrl)
 
         // Limpa a URL para não deixar JWTs visíveis no histórico/endereço.
-        navigate('/Game', { replace: true })
+        navigate(location.pathname, { replace: true })
       }
 
       if (!token) {
@@ -66,7 +67,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!canAccess) {
-    return <Navigate to="/login" replace />
+    // "/" é a página de sign-in; não existe rota /login (apiClient usa o mesmo destino).
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>

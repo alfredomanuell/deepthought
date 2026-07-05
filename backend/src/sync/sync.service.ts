@@ -128,6 +128,20 @@ export class SyncService {
     userId: string,
     profile: MappedFortyTwoProfile,
   ): Promise<void> {
+    /**
+     * O XP local é base (nível da 42 * 1000) + bónus das conquistas.
+     * Recalcular a soma aqui evita que o sync apague o XP que o
+     * AchievementsService atribuiu por incremento.
+     */
+    const unlocked = await tx.userAchievement.findMany({
+      where: { userId },
+      select: { achievement: { select: { xpReward: true } } },
+    });
+    const achievementXp = unlocked.reduce(
+      (sum, ua) => sum + ua.achievement.xpReward,
+      0,
+    );
+
     /** Actualiza o User dentro da transação Prisma do sync. */
     await tx.user.update({
       /** Usa o ID interno da app, não o ID numérico da API 42. */
@@ -146,8 +160,8 @@ export class SyncService {
         level: profile.level,
         /** Pontos de avaliação usados pela conquista EVALUATOR. */
         evalPoints: profile.evalPoints,
-        /** XP local aproximado a partir do nível da 42. */
-        xp: Math.round(profile.level * 1000),
+        /** XP local: base aproximada do nível da 42 + bónus de conquistas. */
+        xp: Math.round(profile.level * 1000) + achievementXp,
         /** Timestamp usado para saber quando o sync terminou com sucesso. */
         lastSyncAt: new Date(),
       },

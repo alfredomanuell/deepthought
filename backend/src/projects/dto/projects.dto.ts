@@ -7,7 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { ProjectStatus } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsInt, Min, Max } from 'class-validator';
 
 /**
@@ -88,10 +88,14 @@ export class ProjectsQueryDto {
 
   /**
    * Filtrar apenas projectos que precisam de ajuda.
+   * `@Type(() => Boolean)` converteria "false" em true; a transform explícita
+   * mapeia as strings da query para booleanos reais.
    */
   @IsOptional()
+  @Transform(({ value }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
   @IsBoolean()
-  @Type(() => Boolean)
   needHelp?: boolean;
 
   /**
@@ -100,6 +104,16 @@ export class ProjectsQueryDto {
   @IsOptional()
   @IsString()
   campus?: string;
+
+  /**
+   * Apenas os projectos do utilizador autenticado.
+   */
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  mine?: boolean;
 
   /** Página (começa em 1) */
   @IsOptional()
