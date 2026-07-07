@@ -49,7 +49,6 @@ export default function ToS() {
 	}
 
 	useEffect(() => {
-		// public assets should be requested from the root
 		fetch('/ToS.md')
 			.then(response => response.text())
 			.then(text => setContent(text))

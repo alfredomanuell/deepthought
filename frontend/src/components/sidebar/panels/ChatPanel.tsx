@@ -10,11 +10,8 @@ import {
 import { fetchPublicProfile, type PublicProfile } from '../../../api/users'
 
 interface Props {
-  /** Utilizador autenticado (para alinhar mensagens próprias e receipts). */
   currentUserId: string | null
-  /** Pedido externo (Social/Projects) para abrir a DM com este utilizador. */
   pendingDmUserId: string | null
-  /** Sinaliza que o pedido de DM externo foi consumido. */
   onDmConsumed: () => void
 }
 
@@ -43,7 +40,6 @@ export default function ChatPanel({ currentUserId, pendingDmUserId, onDmConsumed
 
   activeRoomRef.current = activeRoom
 
-  /** Abre uma sala: entra no socket room, carrega histórico e marca lida. */
   const openRoom = useCallback((room: ChatRoomSummary) => {
     const socket = getSocket()
     const previous = activeRoomRef.current
@@ -63,7 +59,6 @@ export default function ChatPanel({ currentUserId, pendingDmUserId, onDmConsumed
         setMessages(page.data)
         setNextBefore(page.nextBefore)
         socket?.emit('chat:read', { roomId: room.id })
-        // Zera o contador local da sala aberta
         setRooms((prev) =>
           prev.map((r) => (r.id === room.id ? { ...r, unreadCount: 0 } : r)),
         )
@@ -71,7 +66,6 @@ export default function ChatPanel({ currentUserId, pendingDmUserId, onDmConsumed
       .catch(() => {})
   }, [])
 
-  /** Arranque: carrega salas e abre a global. */
   useEffect(() => {
     fetchChatRooms()
       .then((list) => {
@@ -88,7 +82,6 @@ export default function ChatPanel({ currentUserId, pendingDmUserId, onDmConsumed
     }
   }, [openRoom])
 
-  /** DM pedida a partir de outro painel (Social, Projects, popover). */
   useEffect(() => {
     if (!pendingDmUserId) return
     openDm(pendingDmUserId)
@@ -106,7 +99,6 @@ export default function ChatPanel({ currentUserId, pendingDmUserId, onDmConsumed
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingDmUserId])
 
-  /** Listeners socket: mensagens novas, typing e read receipts. */
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
@@ -117,14 +109,12 @@ export default function ChatPanel({ currentUserId, pendingDmUserId, onDmConsumed
         setMessages((prev) =>
           prev.some((m) => m.id === msg.id) ? prev : [...prev, msg],
         )
-        // Sala aberta: marca lida de imediato (gera receipt para o remetente)
         if (msg.senderId !== currentUserId) {
           socket.emit('chat:read', { roomId: msg.chatRoomId })
         }
         setSomeoneTyping(false)
       }
 
-      // Actualiza lista de salas (última mensagem + não lidas)
       setRooms((prev) =>
         prev.map((r) => {
           if (r.id !== msg.chatRoomId) return r

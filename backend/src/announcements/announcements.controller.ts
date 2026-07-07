@@ -29,7 +29,6 @@ export class AnnouncementsController {
     return this.announcementsService.findAll(userId);
   }
 
-  /** PATCH /announcements/:id/read — marca o anúncio como lido pelo user. */
   @Patch(':id/read')
   markRead(@Param('id') id: string, @CurrentUser('sub') userId: string) {
     return this.announcementsService.markRead(userId, id);

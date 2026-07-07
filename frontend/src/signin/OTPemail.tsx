@@ -9,12 +9,10 @@ export default function OTPEmail() {
 	const [error, setError] = useState('')
 	const navigate = useNavigate()
 	const [searchParams] = useSearchParams()
-	// userId vem do redirect OAuth quando o backend detecta isEmailVerified=false.
 	const userId = searchParams.get('userId')
 
 	async function handleVerifyOtp() {
 
-		// Sem userId não existe forma segura de associar o OTP ao utilizador criado após OAuth.
 		if (!userId) {
 			setError('User not found in verification link')
 			return
@@ -27,7 +25,6 @@ export default function OTPEmail() {
 
 		try {
 
-			// Usa o endpoint OTP já existente no backend; não recria lógica de OTP no frontend.
 			const response = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
 				method: 'POST',
 				headers: {
@@ -50,7 +47,6 @@ export default function OTPEmail() {
 				return
 			}
 
-			// O resto do projeto já usa localStorage.token/refreshToken para proteger /Game.
 			localStorage.setItem('token', data.accessToken)
 			localStorage.setItem('refreshToken', data.refreshToken)
 

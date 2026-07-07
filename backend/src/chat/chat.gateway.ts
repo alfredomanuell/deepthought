@@ -14,14 +14,11 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { ChatService } from './chat.service';
 import { ChatRoomDto, ChatSendDto } from './dto/chat.dto';
 
-/** Sala socket.io de uma sala de chat persistida. */
 function chatRoom(roomId: string): string {
   return `chat:${roomId}`;
 }
 
 /**
- * Eventos de chat em tempo real.
- *
  * Partilha o servidor socket.io (namespace default) com o WorldGateway —
  * a autenticação do handshake é feita lá, que preenche client.data.userId.
  * Handlers aqui só aceitam sockets já autenticados.
@@ -37,20 +34,15 @@ export class ChatGateway {
   private readonly logger = new Logger(ChatGateway.name);
 
   constructor(
-    /** Persistência de salas/mensagens/leituras */
     private readonly chat: ChatService,
-    /** Notificação persistida para destinatários de DM offline */
     private readonly notifications: NotificationsService,
-    /** Presença por sala pessoal (user:{id}) para detectar offline */
     private readonly realtime: RealtimeService,
   ) {}
 
-  /** Lê o userId autenticado pelo handshake do WorldGateway. */
   private userIdOf(client: Socket): string | null {
     return (client.data as { userId?: string })?.userId ?? null;
   }
 
-  /** chat:join — entra na sala socket.io depois de validar o acesso. */
   @SubscribeMessage('chat:join')
   async handleJoin(
     @ConnectedSocket() client: Socket,
@@ -67,7 +59,6 @@ export class ChatGateway {
     }
   }
 
-  /** chat:leave — sai da sala socket.io (a membership na BD mantém-se). */
   @SubscribeMessage('chat:leave')
   async handleLeave(
     @ConnectedSocket() client: Socket,
@@ -76,7 +67,6 @@ export class ChatGateway {
     await client.leave(chatRoom(body.roomId));
   }
 
-  /** chat:send — persiste e difunde a mensagem para a sala. */
   @SubscribeMessage('chat:send')
   async handleSend(
     @ConnectedSocket() client: Socket,
@@ -95,7 +85,6 @@ export class ChatGateway {
 
     const { message, roomType, recipientId } = saved;
 
-    /** Difunde a quem tem a sala aberta (inclui o próprio remetente). */
     this.server.to(chatRoom(body.roomId)).emit('chat:message', message);
 
     if (roomType === ChatRoomType.PRIVATE && recipientId) {
@@ -112,7 +101,7 @@ export class ChatGateway {
     }
   }
 
-  /** chat:typing — volátil, sem persistência; reenvia aos outros da sala. */
+  /** Volátil, sem persistência — reenvia aos outros da sala. */
   @SubscribeMessage('chat:typing')
   handleTyping(
     @ConnectedSocket() client: Socket,
@@ -127,7 +116,6 @@ export class ChatGateway {
     });
   }
 
-  /** chat:read — actualiza lastReadAt e difunde o read receipt. */
   @SubscribeMessage('chat:read')
   async handleRead(
     @ConnectedSocket() client: Socket,

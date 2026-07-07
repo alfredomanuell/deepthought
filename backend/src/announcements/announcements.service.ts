@@ -7,20 +7,14 @@ import { CreateAnnouncementDto } from './dto/announcement.dto';
 export class AnnouncementsService {
   constructor(
     private readonly prisma: PrismaService,
-    /** Broadcast de anúncios novos para todos os sockets ligados */
     private readonly realtime: RealtimeService,
   ) {}
 
-  /**
-   * Lista anúncios com o estado de leitura do utilizador autenticado.
-   * GET /announcements
-   */
   async findAll(userId: string) {
     const announcements = await this.prisma.announcement.findMany({
       orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
       include: {
         author: { select: { id: true, login: true, displayName: true } },
-        /** Apenas a leitura do próprio utilizador, para derivar isRead. */
         reads: { where: { userId }, select: { id: true } },
       },
     });
@@ -31,7 +25,6 @@ export class AnnouncementsService {
     }));
   }
 
-  /** Cria o anúncio e difunde-o em tempo real a todos os utilizadores. */
   async create(authorId: string, dto: CreateAnnouncementDto) {
     const announcement = await this.prisma.announcement.create({
       data: {
@@ -45,16 +38,11 @@ export class AnnouncementsService {
       },
     });
 
-    /** Badge em tempo real nos clientes ligados. */
     this.realtime.emitToAll('announcement:new', announcement);
 
     return announcement;
   }
 
-  /**
-   * Marca um anúncio como lido pelo utilizador (idempotente).
-   * PATCH /announcements/:id/read
-   */
   async markRead(userId: string, announcementId: string) {
     const announcement = await this.prisma.announcement.findUnique({
       where: { id: announcementId },

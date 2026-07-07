@@ -24,27 +24,23 @@ const TYPE_ICONS: Record<NotificationType, string> = {
 }
 
 interface Props {
-  /** Mantém o badge do sino sincronizado com o estado do painel. */
   onUnreadChange: (count: number | ((prev: number) => number)) => void
 }
 
 export default function NotificationsPanel({ onUnreadChange }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
-  /** notificationId → resultado da acção de amizade (Accepted!/erro). */
   const [actionResult, setActionResult] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetchNotifications()
       .then((page) => {
         setNotifications(page.data)
-        // Fonte de verdade do servidor corrige qualquer contagem local
         onUnreadChange(page.meta.unreadCount)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
 
-    // Com o painel aberto, novas notificações aparecem no topo em tempo real
     const socket = getSocket()
     const onNew = (notification: Notification) => {
       setNotifications((prev) => [notification, ...prev])
@@ -67,7 +63,6 @@ export default function NotificationsPanel({ onUnreadChange }: Props) {
     } catch {}
   }
 
-  /** Marca lida localmente + servidor (partilhado pelas acções de amizade). */
   async function settle(notification: Notification, result: string) {
     setActionResult((prev) => ({ ...prev, [notification.id]: result }))
     if (!notification.isRead) {

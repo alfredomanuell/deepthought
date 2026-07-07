@@ -21,9 +21,7 @@ import type { Response } from 'express';
 @Controller('auth')
 export class AuthController {
   constructor(
-    /** AuthService concentra o fluxo OAuth 42 -> User/sync -> OTP ou JWT. */
     private readonly authService: AuthService,
-    /** OtpService já possui a emissão/rotação de JWTs, incluindo refresh token. */
     private readonly otpService: OtpService,
   ) {}
 
@@ -36,21 +34,16 @@ export class AuthController {
   @UseFilters(FortyTwoOAuthExceptionFilter)
   @UseGuards(AuthGuard('42'))
   async callback(@Req() req, @Res() res: Response) {
-    /** O accessToken vem da strategy OAuth2 da 42 depois da callback. */
     const result = await this.authService.login42(req.user.accessToken);
 
-    /** FRONTEND_URL centraliza o destino do browser depois do OAuth da 42. */
     const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
-    /** Primeiro login: o backend já gerou/enviou OTP e redireciona para o ecrã de validação. */
     if ('requiresOtp' in result) {
-      /** userId é necessário para POST /auth/otp/verify; não há JWT antes do OTP válido. */
       return res.redirect(
         `${frontendUrl}/OTPemail?userId=${encodeURIComponent(result.userId)}`,
       );
     }
 
-    /** Login futuro: guarda cookies para compatibilidade com clientes que já os usem. */
     res.cookie('access_token', result.accessToken, {
       httpOnly: true,
       secure: true,
@@ -58,7 +51,6 @@ export class AuthController {
       maxAge: 1000 * 60 * 60 * 24,
     });
 
-    /** Refresh token também segue em cookie httpOnly para não depender só de localStorage. */
     res.cookie('refresh_token', result.refreshToken, {
       httpOnly: true,
       secure: true,
@@ -84,17 +76,11 @@ export class AuthController {
       return res.redirect(`${frontendUrl}/CharacterCreation?${params.toString()}`);
     }
 
-    /** Utilizador completamente integrado: entra directamente no jogo. */
     return res.redirect(`${frontendUrl}/Game?${params.toString()}`);
   }
 
-  /**
-   * POST /auth/refresh
-   * Renova access/refresh tokens para o ProtectedRoute do frontend sem refazer OAuth ou OTP.
-   */
   @Post('refresh')
   async refresh(@Body() dto: RefreshTokenDto): Promise<OtpTokens> {
-    /** Reutiliza a validação/hash/rotação de tokens existente no OtpService. */
     return this.otpService.refreshTokens(dto.refreshToken);
   }
 }

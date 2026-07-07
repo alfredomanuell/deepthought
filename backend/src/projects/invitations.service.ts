@@ -15,7 +15,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FriendshipsService } from '../friendships/friendships.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
-/** Campos públicos dos utilizadores incluídos nas listagens de convites. */
 const INVITE_USER_SELECT = {
   id: true,
   login: true,
@@ -23,7 +22,6 @@ const INVITE_USER_SELECT = {
   avatar: true,
 } satisfies Prisma.UserSelect;
 
-/** Include comum: projecto + ambos os lados do convite. */
 const INVITE_INCLUDE = {
   project: { select: { id: true, name: true, slug: true } },
   inviter: { select: INVITE_USER_SELECT },
@@ -31,30 +29,18 @@ const INVITE_INCLUDE = {
 } satisfies Prisma.ProjectInvitationInclude;
 
 /**
- * Serviço de convites para projectos.
- * Convida outro utilizador a juntar-se a um Project do catálogo; ao aceitar,
- * é criado (upsert) o UserProject IN_PROGRESS do convidado.
+ * Ao aceitar um convite é criado (upsert) o UserProject IN_PROGRESS do convidado.
  */
 @Injectable()
 export class InvitationsService {
   private readonly logger = new Logger(InvitationsService.name);
 
   constructor(
-    /** Acesso à base de dados */
     private readonly prisma: PrismaService,
-    /** Bloqueios: sem convites entre utilizadores bloqueados */
     private readonly friendships: FriendshipsService,
-    /** Notificações persistidas + push em tempo real (fase 2) */
     private readonly notifications: NotificationsService,
   ) {}
 
-  /**
-   * Convida um utilizador para um projecto do catálogo.
-   * POST /projects/:id/invite  (body: { userId })
-   * @param projectId Project.id do catálogo global
-   * @param inviter Utilizador autenticado que convida
-   * @param inviteeId Utilizador convidado
-   */
   async invite(
     projectId: string,
     inviter: { sub: string; login: string },
@@ -87,7 +73,6 @@ export class InvitationsService {
       throw new ForbiddenException('Cannot invite this user');
     }
 
-    /** Convite é inútil se o convidado já está activo/terminou o projecto. */
     const existingProgress = await this.prisma.userProject.findUnique({
       where: {
         userId_projectId: { userId: inviteeId, projectId },
@@ -123,7 +108,6 @@ export class InvitationsService {
       }
     }
 
-    /** Convite novo, ou re-convite depois de uma recusa (volta a PENDING). */
     const invitation = existing
       ? await this.prisma.projectInvitation.update({
           where: { id: existing.id },
@@ -147,10 +131,6 @@ export class InvitationsService {
     return invitation;
   }
 
-  /**
-   * Lista convites pendentes recebidos e enviados.
-   * GET /invitations
-   */
   async list(userId: string) {
     const rows = await this.prisma.projectInvitation.findMany({
       where: {
@@ -167,14 +147,9 @@ export class InvitationsService {
     };
   }
 
-  /**
-   * Aceita um convite recebido: marca ACCEPTED e cria o UserProject.
-   * PATCH /invitations/:id/accept
-   */
   async accept(id: string, invitee: { sub: string; login: string }) {
     const invitation = await this.findPendingForInvitee(id, invitee.sub);
 
-    /** Transacção: resposta ao convite + entrada no projecto são atómicas. */
     const [updated] = await this.prisma.$transaction([
       this.prisma.projectInvitation.update({
         where: { id },
@@ -209,10 +184,6 @@ export class InvitationsService {
     return updated;
   }
 
-  /**
-   * Recusa um convite recebido.
-   * PATCH /invitations/:id/reject
-   */
   async reject(id: string, invitee: { sub: string; login: string }) {
     const invitation = await this.findPendingForInvitee(id, invitee.sub);
 

@@ -19,7 +19,6 @@ import { sendFriendRequest } from '../../../api/friendships'
 
 interface Props {
   currentUserId: string | null
-  /** Abre a DM com um utilizador no painel de chat. */
   onOpenDm: (userId: string) => void
 }
 
@@ -28,7 +27,6 @@ type Tab = 'help' | 'peers'
 export default function ProjectBoardPanel({ currentUserId, onOpenDm }: Props) {
   const [tab, setTab] = useState<Tab>('help')
 
-  // ── Help wanted (tab 1) ──────────────────────────────────
   const [posts, setPosts] = useState<HelpPost[]>([])
   const [loadingPosts, setLoadingPosts] = useState(true)
   const [showPostForm, setShowPostForm] = useState(false)
@@ -38,13 +36,11 @@ export default function ProjectBoardPanel({ currentUserId, onOpenDm }: Props) {
   const [formDesc, setFormDesc] = useState('')
   const [formError, setFormError] = useState('')
   const [posting, setPosting] = useState(false)
-  /** Post expandido (dono a ver ofertas) + ofertas carregadas. */
   const [expandedPost, setExpandedPost] = useState<string | null>(null)
   const [offers, setOffers] = useState<HelpOffer[]>([])
   const [loadingOffers, setLoadingOffers] = useState(false)
   const [rowState, setRowState] = useState<Record<string, string>>({})
 
-  // ── Find peers (tab 2) ───────────────────────────────────
   const [catalog, setCatalog] = useState<ProjectCatalogItem[]>([])
   const [peersProjectId, setPeersProjectId] = useState('')
   const [peers, setPeers] = useState<ProjectPeers | null>(null)
@@ -61,7 +57,6 @@ export default function ProjectBoardPanel({ currentUserId, onOpenDm }: Props) {
 
   useEffect(loadPosts, [loadPosts])
 
-  /** Catálogo para o tab de peers (carregado uma vez). */
   useEffect(() => {
     fetchProjectCatalog()
       .then((list) => {
@@ -118,7 +113,6 @@ export default function ProjectBoardPanel({ currentUserId, onOpenDm }: Props) {
     }
   }
 
-  /** Dono clica no próprio post → mostra/esconde as ofertas recebidas. */
   function toggleOffers(post: HelpPost) {
     if (expandedPost === post.userProject.id) {
       setExpandedPost(null)
@@ -133,7 +127,6 @@ export default function ProjectBoardPanel({ currentUserId, onOpenDm }: Props) {
       .finally(() => setLoadingOffers(false))
   }
 
-  /** Aceitar oferta: amizade automática no backend + abre a DM do helper. */
   async function handleAcceptOffer(offer: HelpOffer) {
     try {
       const { helper } = await acceptOffer(offer.id)

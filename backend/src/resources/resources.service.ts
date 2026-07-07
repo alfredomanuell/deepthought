@@ -9,10 +9,6 @@ import { FileUploadService } from './file-upload.service';
 import { CreateResourceDto, UploadResourceDto, ResourcesQueryDto } from './dto/resources.dto';
 import { Role, ResourceType } from '@prisma/client';
 
-/**
- * Serviço de gestão de recursos partilhados.
- * Permite criar, listar e apagar links/PDFs/vídeos associados a projectos.
- */
 @Injectable()
 export class ResourcesService {
   private readonly logger = new Logger(ResourcesService.name);
@@ -22,16 +18,10 @@ export class ResourcesService {
     private readonly fileUploadService: FileUploadService,
   ) {}
 
-  /**
-   * Lista recursos com filtros e paginação.
-   * GET /resources
-   * @param query Filtros: projectId, type
-   */
   async findAll(query: ResourcesQueryDto) {
     const { projectId, type, page = 1, limit = 20 } = query;
     const skip = (page - 1) * limit;
 
-    // Constrói filtro dinamicamente
     const where: any = {};
 
     if (projectId) {
@@ -49,11 +39,9 @@ export class ResourcesService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          // Inclui dados do utilizador que partilhou
           user: {
             select: { id: true, login: true, displayName: true, avatar: true },
           },
-          // Inclui dados do projecto associado
           project: {
             select: { id: true, name: true, slug: true },
           },
@@ -68,26 +56,13 @@ export class ResourcesService {
     };
   }
 
-  /**
-   * Lista recursos de um projecto específico.
-   * GET /projects/:id/resources
-   * @param projectId ID do projecto (slug ou ID interno)
-   */
   async findByProject(projectId: string, page = 1, limit = 20) {
     return this.findAll({ projectId, page, limit });
   }
 
-  /**
-   * Cria um novo recurso partilhado.
-   * Verifica se o projecto existe antes de criar.
-   * POST /resources
-   * @param userId ID do utilizador que partilha
-   * @param dto Dados do recurso
-   */
   async create(userId: string, dto: CreateResourceDto) {
     this.logger.log(`User ${userId} creating resource: ${dto.title}`);
 
-    // Verifica se o projecto existe
     const project = await this.prisma.project.findUnique({
       where: { id: dto.projectId },
     });
@@ -112,10 +87,6 @@ export class ResourcesService {
     });
   }
 
-  /**
-   * Cria um recurso a partir de um ficheiro enviado.
-   * POST /resources/upload
-   */
   async createFromFile(userId: string, dto: UploadResourceDto, file: Express.Multer.File) {
     this.logger.log(`User ${userId} uploading file: ${file.originalname}`);
 
@@ -147,14 +118,6 @@ export class ResourcesService {
     });
   }
 
-  /**
-   * Apaga um recurso.
-   * Apenas o criador ou um ADMIN pode apagar.
-   * DELETE /resources/:id
-   * @param id ID do recurso
-   * @param userId ID do utilizador autenticado
-   * @param userRole Role do utilizador autenticado
-   */
   async remove(id: string, userId: string, userRole: Role) {
     const resource = await this.prisma.resource.findUnique({
       where: { id },

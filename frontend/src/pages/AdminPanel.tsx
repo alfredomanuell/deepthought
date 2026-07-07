@@ -10,11 +10,6 @@ import {
   type AdminUser,
 } from '../api/admin'
 
-/**
- * Painel de administração — tabela sobre os endpoints /admin/users.
- * O backend já exige role ADMIN (RolesGuard); este guard client-side
- * apenas evita mostrar uma página vazia a não-admins.
- */
 export default function AdminPanel() {
   const navigate = useNavigate()
   const [authorized, setAuthorized] = useState(false)

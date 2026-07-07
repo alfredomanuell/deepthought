@@ -38,11 +38,8 @@ const NAV_ITEMS: NavItem[] = [
 interface Props {
   activePanel: PanelId
   onSelect: (id: PanelId) => void
-  /** Nº de notificações não lidas para o badge do sino. */
   unreadCount: number
-  /** Nº de anúncios não lidos para o badge do ícone de anúncios. */
   announcementsUnread: number
-  /** Mostra o atalho para o painel de administração. */
   isAdmin: boolean
 }
 

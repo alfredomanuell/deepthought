@@ -14,7 +14,6 @@ interface User {
 
 interface Props {
   user: User | null
-  /** Mantém o badge de anúncios não lidos sincronizado com este painel. */
   onUnreadChange: (count: number | ((prev: number) => number)) => void
 }
 
@@ -34,13 +33,11 @@ export default function AnnouncementsPanel({ user, onUnreadChange }: Props) {
     fetchAnnouncements()
       .then((list) => {
         setAnnouncements(list)
-        // Fonte de verdade do servidor para o badge
         onUnreadChange(list.filter((a) => !a.isRead).length)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
 
-    // Anúncio novo chega em tempo real com o painel aberto
     const socket = getSocket()
     const onNew = (announcement: Announcement) => {
       setAnnouncements((prev) =>

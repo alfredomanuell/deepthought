@@ -18,10 +18,8 @@ export function userRoom(userId: string): string {
 export class RealtimeService {
   private readonly logger = new Logger(RealtimeService.name);
 
-  /** Servidor socket.io registado pelo gateway; null até o WS arrancar. */
   private server: Server | null = null;
 
-  /** Chamado uma vez pelo WorldGateway em afterInit. */
   setServer(server: Server): void {
     this.server = server;
   }

@@ -96,9 +96,7 @@ export default function Sidebar() {
   const [user, setUser] = useState<User | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [announcementsUnread, setAnnouncementsUnread] = useState(0)
-  /** Pedido de "abrir DM com X" vindo de outro painel; consumido pelo chat. */
   const [dmUserId, setDmUserId] = useState<string | null>(null)
-  /** Below lg the panel is a toggleable drawer; at lg+ it's always visible. */
   const [panelOpen, setPanelOpen] = useState(false)
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -106,19 +104,16 @@ export default function Sidebar() {
     fetchMe()
       .then((me) => {
         setUser(me)
-        // Seed do badge com a contagem que /users/me já devolve
         setUnreadCount(me.unreadNotifications ?? 0)
       })
       .catch(() => {})
 
-    // Seed do badge de anúncios não lidos
     fetchAnnouncements()
       .then((list) => setAnnouncementsUnread(list.filter((a) => !a.isRead).length))
       .catch(() => {})
   }, [])
 
   useEffect(() => {
-    // Incrementos em tempo real; os painéis corrigem a contagem quando abrem
     const socket = getSocket()
     const onNotification = () => setUnreadCount((c) => c + 1)
     const onAnnouncement = () => setAnnouncementsUnread((c) => c + 1)
@@ -142,7 +137,6 @@ export default function Sidebar() {
     exitTimer.current = setTimeout(() => setExitingPanel(null), 160)
   }
 
-  /** Abrir DM a partir de qualquer painel: muda para o chat com alvo. */
   const openDmWith = useCallback((userId: string) => {
     setDmUserId(userId)
     setPanelOpen(true)
